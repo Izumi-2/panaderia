@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card p-4">
+    <h2>Producto: {{ object.nombre }}</h2>
+    <ul class="list-group list-group-flush mb-3">
+        <li class="list-group-item">Marca: {% if object.marca %}{{ object.marca.nombre }}{% else %}-{% endif %}</li>
+        <li class="list-group-item">Categoría: {{ object.get_categoria_display }}</li>
+        <li class="list-group-item">Stock: {{ object.stock }}</li>
+        <li class="list-group-item">Sabor: {% if object.sabor %}Sí{% else %}No{% endif %}</li>
+    </ul>
+    <a href="{% url 'panaderia:product_update' object.id %}" class="btn btn-warning">Editar</a>
+    <a href="{% url 'panaderia:product_list' %}" class="btn btn-secondary ms-2">Volver</a>
+</div>
+{% endblock %}

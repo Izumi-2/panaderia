@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="header-title">Agregar Marca</h2>
+<div class="card p-4">
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="id_nombre" class="form-label">Nombre de la marca</label>
+            {{ form.nombre }}
+            {{ form.nombre.errors }}
+        </div>
+        <div class="mb-3">
+            <label for="id_tipo" class="form-label">Tipo de marca</label>
+            {{ form.tipo }}
+            {{ form.tipo.errors }}
+            <div class="form-text">Selecciona si esta marca corresponde a Panadería, Nevera, Chucherías o Recursos.</div>
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <a href="{% url 'panaderia:marca_list' %}" class="btn btn-secondary ms-2">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'panaderia/css/product_form.css' %}">
+{% endblock %}
+{% block content %}
+<div class="card shadow-sm mb-4 product-form-card">
+    <div class="card-header bg-primary text-white product-form-header">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+            <div>
+                <h2 class="mb-1">Agregar Recurso</h2>
+                <p class="mb-0">Registra un insumo o recurso necesario para la panadería.</p>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb breadcrumb-pan rounded-3">
+                <li class="breadcrumb-item"><a href="{% url 'panaderia:recurso_list' %}">Recursos</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Nuevo recurso</li>
+            </ol>
+        </nav>
+        <form method="post">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="section-card p-4">
+                        <h5 class="section-title">Datos del recurso</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="id_tipo_item" class="form-label">Tipo de recurso</label>
+                                {{ form.tipo_item }}
+                                {{ form.tipo_item.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_marca" class="form-label">Marca</label>
+                                {{ form.marca }}
+                                {{ form.marca.errors }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="section-card p-4">
+                        <h5 class="section-title">Inventario</h5>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="id_cantidad" class="form-label">Cantidad</label>
+                                {{ form.cantidad }}
+                                {{ form.cantidad.errors }}
+                                <div class="form-text">Cantidad actual disponible del recurso.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 d-flex justify-content-end gap-2">
+                <a href="{% url 'panaderia:recurso_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Guardar recurso</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

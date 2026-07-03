@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Recibo</title>
+    <style>table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:6px}</style>
+</head>
+<body>
+    <h1>Recibo - Venta #{{ venta.id }}</h1>
+    <p>Fecha: {{ venta.fecha }}</p>
+    <table>
+        <thead>
+            <tr><th>Producto</th><th>Marca</th><th>Precio</th><th>Cantidad</th><th>Subtotal</th></tr>
+        </thead>
+        <tbody>
+        {% for item in venta.items.all %}
+            <tr>
+                <td>{{ item.producto.nombre }}</td>
+                <td>{% if item.producto.marca %}{{ item.producto.marca.nombre }}{% else %}-{% endif %}</td>
+                <td>{{ item.precio_unitario }}</td>
+                <td>{{ item.cantidad }}</td>
+                <td>{{ item.subtotal|floatformat:2 }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <h3>Total: {{ venta.total }}</h3>
+</body>
+</html>

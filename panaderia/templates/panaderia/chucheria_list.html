@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="header-title">Listado de Chucherías</h2>
+<div class="card p-3">
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Marca</th>
+                <th>Descripción</th>
+                <th>Stock</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for chucheria in chucherias %}
+            <tr>
+                <td>{{ chucheria.nombre }}</td>
+                <td>{{ chucheria.marca.nombre|default:"N/A" }}</td>
+                <td>{{ chucheria.descripcion|default:"N/A" }}</td>
+                <td>
+                    {{ chucheria.stock }}
+                    <span class="badge {{ chucheria.stock_badge_class }} ms-2">{{ chucheria.stock_level }}</span>
+                </td>
+                <td>
+                    <a href="{% url 'panaderia:chucheria_update' chucheria.pk %}" class="btn btn-sm btn-warning">Editar</a>
+                    <a href="{% url 'panaderia:chucheria_delete' chucheria.pk %}" class="btn btn-sm btn-danger">Eliminar</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center">No hay chucherías registradas.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="text-end">
+        <a href="{% url 'panaderia:chucheria_create' %}" class="btn btn-primary">Agregar Nueva Chuchería</a>
+    </div>
+</div>
+{% endblock %}

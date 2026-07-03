@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="header-title">Listado de Productos</h2>
+<div class="row">
+    <div class="col-md-3">
+        <div class="sidebar-filter mb-3">
+            <h5>Filtros de Categoría</h5>
+            <div class="list-group">
+                <a href="{% url 'panaderia:product_list' %}" class="list-group-item list-group-item-action {% if not request.GET.categoria %}active{% endif %}">Todos</a>
+                {% for category_value, category_label in categorias %}
+                    {% if category_value != 'recurso' %}
+                        <a href="{% url 'panaderia:product_list' %}?categoria={{ category_value }}" class="list-group-item list-group-item-action {% if request.GET.categoria == category_value %}active{% endif %}">{{ category_label }}</a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <div class="card p-3">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Marca</th>
+                        <th>Categoría</th>
+                        <th>Stock</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for producto in productos %}
+                    <tr>
+                        <td>{{ producto.nombre }}</td>
+                        <td>{{ producto.marca.nombre|default:"N/A" }}</td>
+                        <td>{{ producto.get_categoria_display }}</td>
+                        <td>
+                            {{ producto.stock }}
+                            <span class="badge {{ producto.stock_badge_class }} ms-2">{{ producto.stock_level }}</span>
+                        </td>
+                        <td>
+                            <a href="{% url 'panaderia:product_detail' producto.pk %}" class="btn btn-sm btn-info">Ver</a>
+                            <a href="{% url 'panaderia:product_update' producto.pk %}" class="btn btn-sm btn-warning">Editar</a>
+                            <a href="{% url 'panaderia:product_delete' producto.pk %}" class="btn btn-sm btn-danger">Eliminar</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center">No hay productos registrados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="text-end">
+                <a href="{% url 'panaderia:product_create' %}" class="btn btn-primary">Agregar Nuevo Producto</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

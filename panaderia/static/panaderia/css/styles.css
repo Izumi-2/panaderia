@@ -1,0 +1,425 @@
+body {
+    background: linear-gradient(180deg, #fff8e1 0%, #ffecb3 100%);
+    color: #3e2723;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+}
+
+.navbar {
+    background-color: #6d4c41;
+    padding: 0.8rem 0;
+}
+
+.navbar-brand,
+.nav-link {
+    color: #ffffff !important;
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+}
+
+.navbar-logo {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.14);
+    filter: saturate(1.1) contrast(1.05) brightness(0.98);
+    background: rgba(255,255,255,0.18);
+    padding: 4px;
+    border: 1px solid rgba(255,255,255,0.18);
+}
+
+.navbar-nav .nav-link {
+    margin-right: 14px;
+}
+
+.venta-summary-card,
+.currency-summary-card,
+.report-card {
+    border-radius: 18px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(141, 110, 99, 0.15);
+}
+
+.user-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.12));
+    border-radius: 999px;
+    padding: 0.4rem 0.8rem;
+    color: #fff;
+    margin-right: 10px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+    border: 1px solid rgba(255,255,255,0.18);
+}
+
+.filter-card {
+    border-radius: 22px;
+    border: 1px solid rgba(141, 110, 99, 0.15);
+    background: rgba(255, 255, 255, 0.96);
+}
+
+.close-day-card {
+    min-width: 320px;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #5d4037;
+}
+
+.table-hover tbody tr:hover {
+    background: #fff8e1;
+}
+
+.table {
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.table thead th {
+    border-bottom: none;
+}
+
+.card .row.g-3 .col-md-3, .card .row.g-3 .col-md-4 {
+    margin-bottom: 0;
+}
+
+.badge {
+    border-radius: 14px;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.bg-blue, .badge-cop {
+    background-color: #2196f3 !important;
+    color: #ffffff !important;
+}
+
+.bg-yellow, .badge-ves {
+    background-color: #ffeb3b !important;
+    color: #212121 !important;
+}
+
+.bg-green, .badge-usd {
+    background-color: #4caf50 !important;
+    color: #ffffff !important;
+}
+
+.user-dropdown .user-chip {
+    border: 0;
+    cursor: pointer;
+}
+
+.user-menu {
+    border: 0;
+    border-radius: 16px;
+    padding: 0.6rem;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.14);
+    min-width: 220px;
+}
+
+.user-menu .dropdown-item {
+    border-radius: 10px;
+    padding: 0.6rem 0.8rem;
+}
+
+.user-menu .dropdown-item:hover {
+    background-color: #fff3e0;
+    color: #6d4c41;
+}
+
+.user-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffcc80, #ffb74d);
+    color: #5d4037;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1rem;
+}
+
+.user-meta {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.user-name {
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.user-role {
+    font-size: 0.74rem;
+    opacity: 0.85;
+}
+
+.nav-link-logout {
+    background: rgba(255,255,255,0.13);
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+}
+
+.main-content {
+    padding: 1rem 1.2rem 2rem;
+}
+
+.card {
+    border-radius: 18px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+    border: none;
+    background: rgba(255, 255, 255, 0.92);
+}
+
+.header-title {
+    color: #4e342e;
+    font-weight: 700;
+    border-bottom: 3px solid #ffcc80;
+    padding-bottom: 10px;
+    margin-bottom: 24px;
+}
+
+.table thead th {
+    background-color: #ffcc80;
+    border-bottom: 0;
+    color: #4e342e;
+}
+
+.table tbody tr:hover {
+    background: #fff3e0;
+}
+
+.table td,
+.table th {
+    vertical-align: middle;
+}
+
+.sidebar-filter {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 22px;
+    border: 1px solid #ffe0b2;
+}
+
+.sidebar-filter h5 {
+    color: #5d4037;
+    font-weight: 700;
+}
+
+.btn-primary {
+    background-color: #8d6e63;
+    border-color: #8d6e63;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    background-color: #6d4c41;
+    border-color: #5d4037;
+}
+
+.btn-info {
+    background-color: #29b6f6;
+    border-color: #29b6f6;
+    color: #212121;
+}
+
+.btn-warning {
+    background-color: #ffb74d;
+    border-color: #ffb74d;
+    color: #212121;
+}
+
+.btn-danger {
+    background-color: #ef5350;
+    border-color: #ef5350;
+}
+
+.btn-logout-circle {
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-logout-circle:hover {
+    background: rgba(255,255,255,0.3);
+    transform: translateY(-1px);
+}
+
+.badge-cop {
+    background-color: #2196f3;
+    color: #ffffff;
+}
+
+.badge-ves {
+    background-color: #ffeb3b;
+    color: #5d4037;
+}
+
+.badge-usd {
+    background-color: #4caf50;
+    color: #ffffff;
+}
+
+.bg-blue {
+    background-color: #2196f3 !important;
+    color: #ffffff !important;
+}
+
+.bg-yellow {
+    background-color: #ffeb3b !important;
+    color: #212121 !important;
+}
+
+.bg-green {
+    background-color: #4caf50 !important;
+    color: #ffffff !important;
+}
+
+.currency-summary-card,
+.report-card {
+    border-radius: 18px;
+    box-shadow: 0 14px 28px rgba(0,0,0,0.08);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: #212121 !important;
+}
+
+.currency-summary-card small,
+.report-card small {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #212121 !important;
+}
+
+.currency-summary-card h4,
+.currency-summary-card .h4 {
+    font-weight: 700;
+    color: #212121 !important;
+}
+
+.currency-summary-card.bg-blue,
+.currency-summary-card.bg-green,
+.currency-summary-card.bg-yellow {
+    color: #212121 !important;
+}
+
+.currency-summary-card.bg-yellow {
+    color: #212121 !important;
+}
+
+.badge-low {
+    background-color: #d32f2f;
+    color: #ffffff;
+}
+
+.badge-ok {
+    background-color: #388e3c;
+    color: #ffffff;
+}
+
+.quantity-input {
+    width: 80px;
+}
+
+.alert {
+    border-radius: 14px;
+}
+
+.producto-picker select {
+    min-height: 220px;
+    width: 100%;
+    border-radius: 18px;
+    border: 1px solid #e0b97a;
+    padding: 0.9rem;
+    background: #fffdf8;
+    color: #5d4037;
+}
+
+.producto-picker select:focus {
+    border-color: #8d6e63;
+    box-shadow: 0 0 0 0.2rem rgba(141, 110, 99, 0.15);
+}
+
+.sale-section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 1.5rem;
+    border: 1px solid #ffebd3;
+}
+
+.sale-section-header {
+    border-bottom: 1px solid #ffe0b2;
+    padding-bottom: 1rem;
+}
+
+.product-summary {
+    background: #fff;
+}
+
+.product-summary strong {
+    display: block;
+    font-size: 1.05rem;
+    margin-top: 0.3rem;
+}
+
+.venta-summary-card {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 14px 30px rgba(0,0,0,0.05);
+    border: 1px solid rgba(255,224,171,0.7);
+}
+
+.venta-table tbody tr:hover {
+    background-color: #fff4e6;
+}
+
+.venta-table th,
+.venta-table td {
+    vertical-align: middle;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(141,110,99,0.15);
+}
+
+.list-group-item.active {
+    background-color: #8d6e63;
+    border-color: #8d6e63;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.table-hover tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #fff4e6;
+}
+
+.badge {
+    font-size: 0.85rem;
+}

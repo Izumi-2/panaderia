@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'panaderia/css/styles.css' %}">
+{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="header-title mb-1">Registrar venta</h2>
+        <p class="text-muted mb-0">Completa los datos de venta y visualiza el resumen antes de guardar.</p>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+            <img src="{% static 'panaderia/img/logo.png' %}" alt="Logo" style="width: 34px; height: 34px; object-fit: contain; filter: brightness(0) invert(1);" />
+        </div>
+    </div>
+</div>
+<div class="card p-4 shadow-sm">
+    <form method="post">
+        {% csrf_token %}
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">{{ form.fecha.label_tag }} {{ form.fecha }}</div>
+            <div class="col-md-6">{{ form.moneda.label_tag }} {{ form.moneda }}</div>
+        </div>
+
+        <div class="sale-section mb-4">
+            <div class="sale-section-header d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="mb-1">Producto vendido</h5>
+                    <p class="text-muted mb-0">Busca y selecciona el producto para registrar la venta.</p>
+                </div>
+                <span class="badge bg-warning text-dark">Fácil y rápido</span>
+            </div>
+
+            <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label for="producto-search" class="form-label">Buscar producto</label>
+                    <input type="text" id="producto-search" class="form-control mb-2" placeholder="Filtrar por nombre">
+                    <div class="producto-picker">
+                        {{ item_form.producto }}
+                    </div>
+                    <div class="form-text">Si el producto no aparece, revisa su existencia en inventario.</div>
+                </div>
+                <div class="col-md-3">{{ item_form.cantidad.label_tag }} {{ item_form.cantidad }}</div>
+                <div class="col-md-4">{{ item_form.precio_unitario.label_tag }} {{ item_form.precio_unitario }}</div>
+            </div>
+
+            <div class="product-summary card mt-4 p-3 border-0 shadow-sm">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h6 class="mb-1">Resumen del producto</h6>
+                        <p class="text-muted mb-0">Detalles clave antes de guardar la venta.</p>
+                    </div>
+                    <div class="badge bg-primary">Producto seleccionado</div>
+                </div>
+                <div class="row text-center">
+                    <div class="col-6 col-md-3 mb-3 mb-md-0">
+                        <span class="d-block text-muted">Producto</span>
+                        <strong id="selected-product">Ninguno</strong>
+                    </div>
+                    <div class="col-6 col-md-3 mb-3 mb-md-0">
+                        <span class="d-block text-muted">Stock</span>
+                        <strong id="selected-stock">-</strong>
+                    </div>
+                    <div class="col-6 col-md-3 mb-3 mb-md-0">
+                        <span class="d-block text-muted">Categoría</span>
+                        <strong id="selected-category">-</strong>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <span class="d-block text-muted">Total</span>
+                        <strong id="order-total">0.00</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'panaderia:venta_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Guardar venta</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('producto-search');
+        const select = document.getElementById('id_producto');
+        const quantityInput = document.getElementById('id_cantidad');
+        const priceInput = document.getElementById('id_precio_unitario');
+        const selectedProduct = document.getElementById('selected-product');
+        const selectedStock = document.getElementById('selected-stock');
+        const selectedCategory = document.getElementById('selected-category');
+        const orderTotal = document.getElementById('order-total');
+
+        if (!searchInput || !select) return;
+
+        const options = Array.from(select.options);
+        const productData = [
+            {% for producto in item_form.fields.producto.queryset %}
+            {
+                id: '{{ producto.pk }}',
+                name: '{{ producto.nombre|escapejs }}',
+                stock: {{ producto.stock }},
+                category: '{{ producto.get_categoria_display|escapejs }}',
+                brand: '{{ producto.marca.nombre|default:"-"|escapejs }}'
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        function updateSummary() {
+            const selectedId = select.value;
+            const product = productData.find(p => p.id === selectedId);
+            const quantity = Number(quantityInput?.value) || 0;
+            const price = Number(priceInput?.value) || 0;
+
+            if (product) {
+                selectedProduct.textContent = product.name;
+                selectedStock.textContent = product.stock;
+                selectedCategory.textContent = product.category;
+            } else {
+                selectedProduct.textContent = 'Ninguno';
+                selectedStock.textContent = '-';
+                selectedCategory.textContent = '-';
+            }
+            orderTotal.textContent = (quantity * price).toFixed(2);
+        }
+
+        searchInput.addEventListener('input', function () {
+            const query = this.value.toLowerCase();
+            select.innerHTML = '';
+            options.forEach(function (option) {
+                const text = option.text.toLowerCase();
+                if (!query || text.includes(query)) {
+                    select.appendChild(option.cloneNode(true));
+                }
+            });
+
+            if (select.options.length === 0) {
+                select.appendChild(new Option('No hay productos coincidentes', ''));
+            }
+            updateSummary();
+        });
+
+        select.addEventListener('change', updateSummary);
+        quantityInput?.addEventListener('input', updateSummary);
+        priceInput?.addEventListener('input', updateSummary);
+
+        updateSummary();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="card p-4">
+    <h3>Configurar palabra de seguridad</h3>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.security_word.label_tag }}
+      {{ form.security_word }}
+      <div class="mt-3">
+        <button class="btn btn-primary" type="submit">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

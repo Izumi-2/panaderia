@@ -1,0 +1,84 @@
+.product-form-card {
+    border: 1px solid rgba(93, 64, 55, 0.28);
+    background: linear-gradient(180deg, #fffaf0 0%, #fff6e0 100%);
+}
+
+.product-form-header {
+    background: linear-gradient(135deg, #6d4c41 0%, #a1887f 100%);
+}
+
+.product-route-badge {
+    font-size: 0.95rem;
+    background-color: rgba(255, 243, 224, 0.95);
+    color: #5d4037;
+    border: 1px solid rgba(255, 234, 167, 0.6);
+}
+
+.breadcrumb-pan {
+    background-color: rgba(255, 245, 230, 0.96);
+    border: 1px solid #ffecb3;
+    padding: 0.6rem 0.9rem;
+}
+
+.breadcrumb-pan .breadcrumb-item + .breadcrumb-item::before {
+    color: #6d4c41;
+}
+
+.section-card {
+    background-color: #fff7ed;
+    border: 1px solid #ffecb3;
+    border-radius: 14px;
+}
+
+.section-title {
+    color: #4e342e;
+    font-weight: 700;
+    margin-bottom: 0.9rem;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #4e342e;
+}
+
+.form-text {
+    color: #6e4e3f;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #5d4037;
+    box-shadow: 0 0 0 0.15rem rgba(93, 64, 55, 0.14);
+}
+
+.btn-primary {
+    min-width: 160px;
+    background-color: #8d6e63;
+    border-color: #8d6e63;
+}
+
+.btn-primary:hover {
+    background-color: #6d4c41;
+    border-color: #5d4037;
+}
+
+.badge-low {
+    background-color: #f8d7da;
+    color: #842029;
+}
+
+.badge-medium {
+    background-color: #fff3cd;
+    color: #664d03;
+}
+
+.badge-high {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+
+.badge-out {
+    background-color: #f8d7da;
+    color: #842029;
+    border: 1px solid #f5c2c7;
+}

@@ -1,0 +1,50 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Validate Django project",
+			"type": "shell",
+			"command": "cd c:\\Users\\Usuario\\Documents\\proyecto_panaderia && .\\venv\\Scripts\\python.exe manage.py check",
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			]
+		},
+		{
+			"label": "Validate Django project 2",
+			"type": "shell",
+			"command": "cd c:\\Users\\Usuario\\Documents\\proyecto_panaderia; .\\venv\\Scripts\\python.exe manage.py check",
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			]
+		},
+		{
+			"label": "Make panaderia migrations",
+			"type": "shell",
+			"command": "cd c:\\Users\\Usuario\\Documents\\proyecto_panaderia; .\\venv\\Scripts\\python.exe manage.py makemigrations panaderia",
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			]
+		},
+		{
+			"label": "Apply Django migrations",
+			"type": "shell",
+			"command": "cd c:\\Users\\Usuario\\Documents\\proyecto_panaderia; .\\venv\\Scripts\\python.exe manage.py migrate",
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			]
+		},
+		{
+			"label": "Validate Django after migrate",
+			"type": "shell",
+			"command": "cd c:\\Users\\Usuario\\Documents\\proyecto_panaderia; .\\venv\\Scripts\\python.exe manage.py check",
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			]
+		}
+	]
+}

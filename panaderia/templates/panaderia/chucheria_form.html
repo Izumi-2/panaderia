@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'panaderia/css/product_form.css' %}">
+{% endblock %}
+{% block content %}
+<div class="card shadow-sm mb-4 product-form-card">
+    <div class="card-header bg-primary text-white product-form-header">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+            <div>
+                <h2 class="mb-1">Agregar Chuchería</h2>
+                <p class="mb-0">Registra una chuchería con descripción para inventario.</p>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb breadcrumb-pan rounded-3">
+                <li class="breadcrumb-item"><a href="{% url 'panaderia:chucheria_list' %}">Chucherías</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Nueva chuchería</li>
+            </ol>
+        </nav>
+        <form method="post">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="section-card p-4">
+                        <h5 class="section-title">Datos de la chuchería</h5>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="id_nombre" class="form-label">Nombre</label>
+                                {{ form.nombre }}
+                                {{ form.nombre.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_marca" class="form-label">Marca</label>
+                                {{ form.marca }}
+                                {{ form.marca.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_descripcion" class="form-label">Descripción</label>
+                                {{ form.descripcion }}
+                                {{ form.descripcion.errors }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="section-card p-4">
+                        <h5 class="section-title">Inventario</h5>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="id_stock" class="form-label">Stock</label>
+                                {{ form.stock }}
+                                {{ form.stock.errors }}
+                                <div class="form-text">Cantidad disponible en almacén.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 d-flex justify-content-end gap-2">
+                <a href="{% url 'panaderia:chucheria_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Guardar chuchería</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+<aside id="sidebar" class="sidebar bg-white shadow-sm">
+    <div class="sidebar-header p-4 d-flex align-items-center justify-content-between border-bottom">
+        <div>
+            <h5 class="mb-0">Menú</h5>
+            <small class="text-muted">Panadería</small>
+        </div>
+        <button class="sidebar-close" type="button" onclick="closeSidebar()" aria-label="Cerrar menú">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <nav class="nav flex-column p-3 gap-2">
+        <a class="nav-link" href="{% url 'panaderia:recurso_list' %}">Inventario</a>
+        <a class="nav-link" href="{% url 'panaderia:product_list' %}">Productos</a>
+        <a class="nav-link" href="{% url 'panaderia:nevera_list' %}">Nevera</a>
+        <a class="nav-link" href="{% url 'panaderia:chucheria_list' %}">Chucherías</a>
+        <a class="nav-link" href="{% url 'panaderia:marca_list' %}">Marcas</a>
+        <a class="nav-link" href="{% url 'panaderia:venta_list' %}">Ventas</a>
+        <a class="nav-link" href="{% url 'panaderia:reportes' %}">Reportes</a>
+        <div class="dropdown-divider my-2"></div>
+        <form action="{% url 'logout' %}" method="post" class="px-3">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger w-100 rounded-pill">Cerrar sesión</button>
+        </form>
+    </nav>
+</aside>

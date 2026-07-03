@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="header-title">Reportes</h2>
+<div class="card p-4 shadow-sm">
+    <form method="get" class="row g-3 align-items-end mb-4">
+        <div class="col-md-4">
+            <label class="form-label" for="fecha_inicio">Fecha inicio</label>
+            <input type="date" id="fecha_inicio" name="fecha_inicio" class="form-control" value="{{ fecha_inicio }}">
+        </div>
+        {# Eliminado campo Fecha fin: solo se usa Fecha inicio #}
+        <div class="col-md-4 d-flex gap-2">
+            <button type="submit" class="btn btn-outline-primary flex-grow-1">Filtrar</button>
+            <a href="{% url 'panaderia:reportes' %}" class="btn btn-outline-secondary flex-grow-1">Limpiar</a>
+        </div>
+    </form>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="mb-0">Reportes generales</h5>
+            <p class="text-muted mb-0">Consulta las ventas por moneda y los totales separados por divisa. Esta vista es independiente de los respaldos.</p>
+        </div>
+        <a href="{% url 'panaderia:export_report_pdf' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-success">Exportar a PDF</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="report-card p-3 rounded-4 bg-blue text-dark shadow-sm">
+                <small>Pesos colombianos</small>
+                <div class="h4 mt-2">{{ currency_totals.COP|floatformat:2 }}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="report-card p-3 rounded-4 bg-yellow text-dark shadow-sm">
+                <small>Bolívares venezolanos</small>
+                <div class="h4 mt-2">{{ currency_totals.VES|floatformat:2 }}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="report-card p-3 rounded-4 bg-green text-dark shadow-sm">
+                <small>Dólares</small>
+                <div class="h4 mt-2">{{ currency_totals.USD|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <h5>Ventas</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Moneda</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for venta in ventas %}
+                        <tr>
+                            <td>{{ venta.fecha|date:'d/m/Y' }}</td>
+                            <td>
+                                {% if venta.moneda == 'COP' %}
+                                    <span class="badge badge-cop">Pesos</span>
+                                {% elif venta.moneda == 'VES' %}
+                                    <span class="badge badge-ves">Bolívares</span>
+                                {% else %}
+                                    <span class="badge badge-usd">Dólares</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ venta.total|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3">Sin ventas</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <h5>Inventario general</h5>
+            <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                {% if fecha_inicio %}
+                                    <th>Stock (al {{ fecha_inicio }})</th>
+                                {% else %}
+                                    <th>Stock actual</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for producto in productos %}
+                            <tr>
+                                <td>{{ producto.nombre }}</td>
+                                <td>{{ producto.stock }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="2">Sin productos</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

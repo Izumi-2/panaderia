@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar recurso{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="card p-4">
+        <h2 class="mb-3">Eliminar recurso</h2>
+        <p>¿Estás seguro de que deseas eliminar el recurso <strong>{{ object.tipo_item }}</strong> de la marca <strong>{{ object.marca }}</strong>?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Confirmar eliminación</button>
+            <a href="{% url 'panaderia:recurso_list' %}" class="btn btn-secondary ms-2">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
