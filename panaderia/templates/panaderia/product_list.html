@@ -1,6 +1,14 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2 class="header-title">Listado de Productos</h2>
+<div class="page-header">
+    <div>
+        <h2 class="header-title">Listado de Productos</h2>
+        <p class="page-intro">Filtra, revisa y administra productos disponibles en el inventario.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'panaderia:product_create' %}" class="btn btn-primary">Agregar Nuevo Producto</a>
+    </div>
+</div>
 <div class="row">
     <div class="col-md-3">
         <div class="sidebar-filter mb-3">

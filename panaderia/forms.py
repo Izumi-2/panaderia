@@ -65,18 +65,66 @@ class BebidaForm(forms.ModelForm):
 
 
 class RecursoForm(forms.ModelForm):
+    tipo_item = forms.CharField(
+        label='Insumo de materia prima',
+        max_length=100,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej. Harina, Azúcar, Levadura, Huevos...',
+        }),
+        error_messages={
+            'required': 'Debes ingresar el insumo de materia prima.',
+            'max_length': 'El nombre del insumo no puede tener más de 100 caracteres.',
+        },
+    )
+    cantidad = forms.DecimalField(
+        label='Cantidad disponible',
+        min_value=0.01,
+        max_digits=10,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej. 22',
+            'step': '0.01',
+        }),
+        error_messages={
+            'required': 'Debes ingresar la cantidad disponible.',
+            'min_value': 'La cantidad debe ser mayor que cero.',
+        },
+    )
+
     class Meta:
         model = Panaderia_items
-        fields = ['tipo_item', 'marca', 'cantidad']
+        fields = ['tipo_item', 'marca', 'cantidad', 'unidad']
         widgets = {
-            'tipo_item': forms.Select(attrs={'class': 'form-select'}),
             'marca': forms.Select(attrs={'class': 'form-select'}),
-            'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Cantidad disponible'}),
+            'unidad': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['marca'].queryset = Marca.objects.all()
+        self.fields['marca'].queryset = Marca.objects.filter(tipo='recurso')
+        self.fields['marca'].label = 'Marca del insumo'
+        self.fields['marca'].empty_label = 'Seleccione una marca'
+        self.fields['marca'].error_messages = {
+            'required': 'Debes seleccionar la marca del insumo.',
+        }
+        self.fields['unidad'].label = 'Unidad de medida'
+        self.fields['unidad'].error_messages = {
+            'required': 'Debes seleccionar la unidad de medida.',
+        }
+
+    def clean_tipo_item(self):
+        tipo_item = self.cleaned_data.get('tipo_item', '').strip()
+        if not tipo_item:
+            raise forms.ValidationError('Debes ingresar el insumo de materia prima.')
+        return tipo_item
+
+    def clean_marca(self):
+        marca = self.cleaned_data.get('marca')
+        if marca and marca.tipo != 'recurso':
+            raise forms.ValidationError('La marca debe pertenecer a la categoría de recursos.')
+        return marca
 
 
 class VentaForm(forms.ModelForm):

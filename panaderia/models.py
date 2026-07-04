@@ -109,22 +109,64 @@ class VentaItem(models.Model):
 
 
 class Panaderia_items(models.Model):
-    tipos = [
-        ("Harina",'Harina'),
-        ('Mantequilla','Mantequilla'),
-        ("Margarina",'Margarina'),
-        ("Huevos",'Huevos'),
-        ("Levadura",'Levadura'),
-        ("Azucar","Azucar"),
-        ("Sal","Sal")
+    UNIDAD_CHOICES = [
+        ('kg', 'Kilogramos'),
+        ('g', 'Gramos'),
+        ('l', 'Litros'),
+        ('ml', 'Mililitros'),
+        ('ud', 'Unidades'),
     ]
 
-    tipo_item = models.CharField(max_length=20, choices=tipos, default='Harina',verbose_name="Producto")
-    marca = models.ForeignKey(Marca,on_delete=models.CASCADE,verbose_name="Marca")
-    cantidad = models.PositiveIntegerField(verbose_name="Bultos restantes")
+    tipo_item = models.CharField(
+        max_length=100,
+        verbose_name="Insumo de materia prima",
+        help_text='Describa el insumo de materia prima que se guardará en el inventario.',
+    )
+    marca = models.ForeignKey(
+        Marca,
+        on_delete=models.CASCADE,
+        verbose_name="Marca",
+        help_text='Marca del insumo de materia prima.',
+    )
+    cantidad = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Cantidad disponible",
+        help_text='Cantidad disponible del insumo en la unidad seleccionada.',
+    )
+    unidad = models.CharField(
+        max_length=10,
+        choices=UNIDAD_CHOICES,
+        default='kg',
+        verbose_name='Unidad de medida',
+        help_text='Unidad en la que se registra la cantidad del insumo.',
+    )
+
+    class Meta:
+        verbose_name = "Insumo de materia prima"
+        verbose_name_plural = "Insumos de materia prima"
 
     def __str__(self):
-        return f"{self.tipo_item} ({self.cantidad})"
+        return f"{self.tipo_item} - {self.cantidad} {self.get_unidad_display()}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        if not self.tipo_item or not self.tipo_item.strip():
+            raise ValidationError({'tipo_item': 'Debes ingresar el nombre del insumo de materia prima.'})
+
+        if self.cantidad is None or self.cantidad <= 0:
+            raise ValidationError({'cantidad': 'La cantidad debe ser mayor que cero.'})
+
+        if self.marca and self.marca.tipo != 'recurso':
+            raise ValidationError({'marca': 'La marca debe corresponder a materia prima (tipo recurso).'})
+
+        if not self.unidad:
+            raise ValidationError({'unidad': 'Debes seleccionar la unidad de medida.'})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     @property
     def stock_level(self):

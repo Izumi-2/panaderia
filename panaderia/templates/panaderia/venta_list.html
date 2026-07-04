@@ -1,19 +1,21 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="d-flex align-items-center justify-content-between mb-4">
+<div class="page-header">
     <div>
         <h2 class="header-title mb-1">Ventas</h2>
-        <p class="text-muted mb-0">Registra y revisa las ventas de forma clara y ordenada.</p>
+        <p class="page-intro">Registra y revisa las ventas de forma clara y ordenada.</p>
     </div>
-    <a href="{% url 'panaderia:venta_create' %}" class="btn btn-primary">Nueva venta</a>
+    <div class="page-actions">
+        <a href="{% url 'panaderia:venta_create' %}" class="btn btn-primary">Nueva venta</a>
+    </div>
 </div>
 <div class="card filter-card p-4 mb-4">
-    <form method="get" class="row g-3 align-items-end">
-        <div class="col-md-3">
+    <form method="get" class="sale-filter-group">
+        <div>
             <label class="form-label" for="fecha_inicio">Fecha inicio</label>
             <input type="date" id="fecha_inicio" name="fecha_inicio" class="form-control" value="{{ fecha_inicio }}">
         </div>
-        <div class="col-md-3">
+        <div>
             <label class="form-label" for="moneda">Moneda</label>
             <select id="moneda" name="moneda" class="form-select">
                 <option value="">Todas</option>
@@ -22,130 +24,97 @@
                 <option value="USD" {% if moneda == 'USD' %}selected{% endif %}>Dólares</option>
             </select>
         </div>
-        <div class="col-md-3 d-flex gap-2">
-            <button type="submit" class="btn btn-outline-primary flex-grow-1">Filtrar</button>
-            <a href="{% url 'panaderia:venta_list' %}" class="btn btn-outline-secondary flex-grow-1">Limpiar</a>
+        <div class="d-flex flex-wrap gap-2 align-items-end">
+            <button type="submit" class="btn btn-outline-primary">Filtrar</button>
+            <a href="{% url 'panaderia:venta_list' %}" class="btn btn-outline-secondary">Limpiar</a>
         </div>
     </form>
 </div>
-<div class="d-flex justify-content-between align-items-center mb-4 gap-3">
-    <div class="row g-3 flex-grow-1">
-        <div class="col-md-4">
-            <div class="venta-summary-card p-3">
-                <small class="text-muted">Ventas registradas</small>
-                <div class="h3 mb-0">{{ ventas_count }}</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="venta-summary-card p-3">
-                <small class="text-muted">Total en caja</small>
-                <div class="h3 mb-0">{{ total_sales|floatformat:2 }}</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="venta-summary-card p-3">
-                <small class="text-muted">Productos vendidos</small>
-                <div class="h3 mb-0">{{ total_items }}</div>
-            </div>
-        </div>
-    </div>
-        <form id="closeDayForm" method="post" action="{% url 'panaderia:cerrar_ventas' %}" class="close-day-card p-3 rounded-4 bg-warning bg-opacity-10 border border-warning d-flex align-items-center gap-3 mb-0">
-                {% csrf_token %}
-                {# Enviar fecha en formato ISO (YYYY-MM-DD) para evitar errores de parseo en el servidor #}
-                <input type="hidden" name="fecha" value="{{ today|date:'Y-m-d' }}">
-                <div>
-                        <strong>Cerrar jornada</strong>
-                        <div class="small text-muted">Cierra las ventas abiertas de {{ today|date:'d/m/Y' }}.</div>
-                </div>
-                <button id="btnCloseDay" type="button" class="btn btn-warning">Cerrar</button>
-        </form>
-
-        <!-- Modal de confirmación antes de cerrar jornada -->
-        <div class="modal fade" id="confirmCloseModal" tabindex="-1" aria-labelledby="confirmCloseModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="confirmCloseModalLabel">Confirmar cierre de jornada</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Antes de cerrar la jornada, confirma que ya generaste los reportes de este día. Al confirmar, se cerrarán las ventas abiertas de la fecha seleccionada y se iniciará una nueva lista de ventas para el siguiente día.</p>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="" id="confirmReportsCheck">
-                            <label class="form-check-label" for="confirmReportsCheck">
-                                He generado los reportes de este día
-                            </label>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button id="confirmCloseBtn" type="button" class="btn btn-warning" disabled>Confirmar cierre</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const btnTrigger = document.getElementById('btnCloseDay');
-                const modalEl = document.getElementById('confirmCloseModal');
-                const confirmBtn = document.getElementById('confirmCloseBtn');
-                const check = document.getElementById('confirmReportsCheck');
-                const form = document.getElementById('closeDayForm');
-                const confirmModal = new bootstrap.Modal(modalEl);
-
-                btnTrigger.addEventListener('click', function(e){
-                    confirmModal.show();
-                });
-
-                check.addEventListener('change', function(){
-                    confirmBtn.disabled = !check.checked;
-                });
-
-                confirmBtn.addEventListener('click', function(){
-                    form.submit();
-                });
-            });
-        </script>
-</div>
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="venta-summary-card p-3">
+<div class="d-flex flex-column flex-xl-row gap-3 mb-4">
+    <div class="summary-grid flex-grow-1">
+        <div class="venta-summary-card summary-card">
             <small class="text-muted">Ventas registradas</small>
             <div class="h3 mb-0">{{ ventas_count }}</div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="venta-summary-card p-3">
+        <div class="venta-summary-card summary-card">
             <small class="text-muted">Total en caja</small>
             <div class="h3 mb-0">{{ total_sales|floatformat:2 }}</div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="venta-summary-card p-3">
+        <div class="venta-summary-card summary-card">
             <small class="text-muted">Productos vendidos</small>
             <div class="h3 mb-0">{{ total_items }}</div>
         </div>
     </div>
+    <form id="closeDayForm" method="post" action="{% url 'panaderia:cerrar_ventas' %}" class="close-day-card p-4 bg-warning bg-opacity-10 border border-warning d-flex flex-column justify-content-between gap-3 mb-0">
+        {% csrf_token %}
+        <input type="hidden" name="fecha" value="{{ today|date:'Y-m-d' }}">
+        <div>
+            <strong>Cerrar jornada</strong>
+            <div class="small text-muted">Cierra las ventas abiertas de {{ today|date:'d/m/Y' }}.</div>
+        </div>
+        <button id="btnCloseDay" type="button" class="btn btn-warning">Cerrar</button>
+    </form>
 </div>
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="currency-summary-card p-3 bg-blue text-dark">
-            <small>Pesos colombianos</small>
-            <div class="h4 mb-0">{{ currency_totals.COP|floatformat:2 }}</div>
+
+<!-- Modal de confirmación antes de cerrar jornada -->
+<div class="modal fade" id="confirmCloseModal" tabindex="-1" aria-labelledby="confirmCloseModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmCloseModalLabel">Confirmar cierre de jornada</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p>Antes de cerrar la jornada, confirma que ya generaste los reportes de este día. Al confirmar, se cerrarán las ventas abiertas de la fecha seleccionada y se iniciará una nueva lista de ventas para el siguiente día.</p>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="confirmReportsCheck">
+                    <label class="form-check-label" for="confirmReportsCheck">
+                        He generado los reportes de este día
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button id="confirmCloseBtn" type="button" class="btn btn-warning" disabled>Confirmar cierre</button>
+            </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="currency-summary-card p-3 bg-yellow text-dark">
-            <small>Bolívares venezolanos</small>
-            <div class="h4 mb-0">{{ currency_totals.VES|floatformat:2 }}</div>
-        </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const btnTrigger = document.getElementById('btnCloseDay');
+        const modalEl = document.getElementById('confirmCloseModal');
+        const confirmBtn = document.getElementById('confirmCloseBtn');
+        const check = document.getElementById('confirmReportsCheck');
+        const form = document.getElementById('closeDayForm');
+        const confirmModal = new bootstrap.Modal(modalEl);
+
+        btnTrigger.addEventListener('click', function(e){
+            confirmModal.show();
+        });
+
+        check.addEventListener('change', function(){
+            confirmBtn.disabled = !check.checked;
+        });
+
+        confirmBtn.addEventListener('click', function(){
+            form.submit();
+        });
+    });
+</script>
+<div class="summary-grid mb-4">
+    <div class="currency-summary-card p-3 bg-blue text-dark">
+        <small>Pesos colombianos</small>
+        <div class="h4 mb-0">{{ currency_totals.COP|floatformat:2 }}</div>
     </div>
-    <div class="col-md-4">
-        <div class="currency-summary-card p-3 bg-green text-dark">
-            <small>Dólares</small>
-            <div class="h4 mb-0">{{ currency_totals.USD|floatformat:2 }}</div>
-        </div>
+    <div class="currency-summary-card p-3 bg-yellow text-dark">
+        <small>Bolívares venezolanos</small>
+        <div class="h4 mb-0">{{ currency_totals.VES|floatformat:2 }}</div>
+    </div>
+    <div class="currency-summary-card p-3 bg-green text-dark">
+        <small>Dólares</small>
+        <div class="h4 mb-0">{{ currency_totals.USD|floatformat:2 }}</div>
     </div>
 </div>
 <div class="card p-4 shadow-sm">

@@ -145,6 +145,8 @@ FORCE_LOGIN_EXEMPT_PATHS = [
     '/favicon.ico',
     '/static/',
     '/media/',
+    '/admin',
+    '/admin/',
     '/admin/login/',
     '/admin/logout/',
 ]

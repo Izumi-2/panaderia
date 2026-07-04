@@ -25,6 +25,8 @@ class ForceLoginMiddleware:
                 '/favicon.ico',
                 '/static/',
                 '/media/',
+                '/admin',
+                '/admin/',
                 '/admin/login/',
                 '/admin/logout/',
             ]

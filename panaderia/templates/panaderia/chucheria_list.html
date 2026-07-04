@@ -1,7 +1,15 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2 class="header-title">Listado de Chucherías</h2>
-<div class="card p-3">
+<div class="page-header">
+    <div>
+        <h2 class="header-title">Listado de Chucherías</h2>
+        <p class="page-intro">Revisa las chucherías disponibles y mantén actualizado su stock.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'panaderia:chucheria_create' %}" class="btn btn-primary">Agregar Nueva Chuchería</a>
+    </div>
+</div>
+<div class="card section-card p-3">
     <div class="table-responsive">
         <table class="table table-hover">
             <thead>

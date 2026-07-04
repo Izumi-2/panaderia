@@ -1,7 +1,15 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2 class="header-title">Listado de Nevera</h2>
-<div class="card p-3">
+<div class="page-header">
+    <div>
+        <h2 class="header-title">Listado de Nevera</h2>
+        <p class="page-intro">Administra los productos de nevera y controla su stock con claridad.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'panaderia:nevera_create' %}" class="btn btn-primary">Agregar ítem de Nevera</a>
+    </div>
+</div>
+<div class="card section-card p-3">
     <div class="table-responsive">
         <table class="table table-hover">
             <thead>

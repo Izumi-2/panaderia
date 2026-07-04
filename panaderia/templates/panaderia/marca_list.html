@@ -1,7 +1,15 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2 class="header-title">Marcas</h2>
-<div class="card p-3">
+<div class="page-header">
+    <div>
+        <h2 class="header-title">Marcas</h2>
+        <p class="page-intro">Organiza marcas por categoría para mantener la clasificación del inventario clara.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'panaderia:marca_create' %}" class="btn btn-primary">Agregar marca</a>
+    </div>
+</div>
+<div class="card section-card p-3">
     <div class="row g-4">
         <div class="col-lg-6">
             <div class="section-card p-3">

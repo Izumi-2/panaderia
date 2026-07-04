@@ -8,16 +8,16 @@
     <div class="card-header bg-primary text-white product-form-header">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
             <div>
-                <h2 class="mb-1">Agregar Recurso</h2>
-                <p class="mb-0">Registra un insumo o recurso necesario para la panadería.</p>
+                <h2 class="mb-1">Agregar materia prima</h2>
+                <p class="mb-0">Registra el insumo de materia prima del panadero y su cantidad física para el inventario.</p>
             </div>
         </div>
     </div>
     <div class="card-body">
         <nav aria-label="breadcrumb" class="mb-4">
             <ol class="breadcrumb breadcrumb-pan rounded-3">
-                <li class="breadcrumb-item"><a href="{% url 'panaderia:recurso_list' %}">Recursos</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Nuevo recurso</li>
+                <li class="breadcrumb-item"><a href="{% url 'panaderia:recurso_list' %}">Materia prima</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Nuevo insumo</li>
             </ol>
         </nav>
         <form method="post">
@@ -30,13 +30,14 @@
                     <div class="section-card p-4">
                         <h5 class="section-title">Datos del recurso</h5>
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="id_tipo_item" class="form-label">Tipo de recurso</label>
+                            <div class="col-md-12">
+                                <label for="id_tipo_item" class="form-label">Insumo de materia prima</label>
                                 {{ form.tipo_item }}
                                 {{ form.tipo_item.errors }}
+                                <div class="form-text">Ingrese el nombre del insumo, por ejemplo Harina, Azúcar, Levadura o Huevos.</div>
                             </div>
-                            <div class="col-md-6">
-                                <label for="id_marca" class="form-label">Marca</label>
+                            <div class="col-md-12">
+                                <label for="id_marca" class="form-label">Marca del insumo</label>
                                 {{ form.marca }}
                                 {{ form.marca.errors }}
                             </div>
@@ -46,20 +47,29 @@
                 <div class="col-lg-4">
                     <div class="section-card p-4">
                         <h5 class="section-title">Inventario</h5>
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <label for="id_cantidad" class="form-label">Cantidad</label>
+                        <div class="quantity-unit-wrapper">
+                            <div>
+                                <label for="id_cantidad" class="form-label">Cantidad disponible</label>
                                 {{ form.cantidad }}
                                 {{ form.cantidad.errors }}
-                                <div class="form-text">Cantidad actual disponible del recurso.</div>
+                            </div>
+                            <div>
+                                <label for="id_unidad" class="form-label">Unidad</label>
+                                {{ form.unidad }}
+                                {{ form.unidad.errors }}
                             </div>
                         </div>
+                        <div class="quantity-unit-preview">
+                            Escribe el número y selecciona la unidad correcta.
+                            Ejemplos: 22 kg, 550 g, 1.50 l, 12 ud.
+                        </div>
+                        <div class="form-text quantity-unit-help">La cantidad registrada se guarda junto con la unidad seleccionada.</div>
                     </div>
                 </div>
             </div>
             <div class="mt-4 d-flex justify-content-end gap-2">
                 <a href="{% url 'panaderia:recurso_list' %}" class="btn btn-outline-secondary">Cancelar</a>
-                <button type="submit" class="btn btn-primary">Guardar recurso</button>
+                <button type="submit" class="btn btn-primary">Guardar materia prima</button>
             </div>
         </form>
     </div>

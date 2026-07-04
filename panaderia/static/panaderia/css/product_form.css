@@ -41,6 +41,34 @@
     color: #4e342e;
 }
 
+.quantity-unit-wrapper {
+    display: grid;
+    grid-template-columns: 1.8fr 1fr;
+    gap: 1rem;
+    align-items: end;
+}
+
+.quantity-unit-wrapper .form-control,
+.quantity-unit-wrapper .form-select {
+    min-width: 0;
+}
+
+.quantity-unit-preview {
+    margin-top: 0.75rem;
+    padding: 0.85rem 1rem;
+    background: rgba(255, 243, 224, 0.95);
+    border: 1px solid rgba(255, 224, 171, 0.9);
+    border-radius: 16px;
+    color: #5d4037;
+    font-size: 0.95rem;
+}
+
+.quantity-unit-help {
+    margin-top: 0.5rem;
+    display: block;
+    color: #6e4e3f;
+}
+
 .form-text {
     color: #6e4e3f;
 }
