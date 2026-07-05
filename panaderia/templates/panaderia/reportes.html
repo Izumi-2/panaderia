@@ -84,29 +84,114 @@
         <div class="col-lg-6">
             <h5>Inventario general</h5>
             <div class="table-responsive">
-                    <table class="table table-sm table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Producto</th>
-                                {% if fecha_inicio %}
-                                    <th>Stock (al {{ fecha_inicio }})</th>
-                                {% else %}
-                                    <th>Stock actual</th>
-                                {% endif %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for producto in productos %}
-                            <tr>
-                                <td>{{ producto.nombre }}</td>
-                                <td>{{ producto.stock }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="2">Sin productos</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                <table class="table table-sm table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            {% if fecha_inicio %}
+                                <th>Stock (al {{ fecha_inicio }})</th>
+                            {% else %}
+                                <th>Stock actual</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for producto in productos %}
+                        <tr>
+                            <td>{{ producto.nombre }}</td>
+                            <td>{{ producto.stock }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2">Sin productos</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-lg-6">
+            <h5>Inventario de Materia Prima</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Marca</th>
+                            <th>Cantidad</th>
+                            <th>Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for recurso in recursos %}
+                        <tr>
+                            <td>{{ recurso.tipo_item }}</td>
+                            <td>{{ recurso.marca.nombre|default:'-' }}</td>
+                            <td>{{ recurso.cantidad }} {{ recurso.get_unidad_display }}</td>
+                            <td>{{ recurso.stock }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4">Sin recursos</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <h5>Insumos de empleados <span class="badge bg-warning text-dark">{{ pending_employee_count }} pendientes</span></h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Empleado</th>
+                            <th>Costo</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for insumo in employee_insumos %}
+                        <tr>
+                            <td>{{ insumo.empleado }}</td>
+                            <td>{{ insumo.costo|floatformat:2 }}</td>
+                            <td>{% if insumo.pagado %}Pagado{% else %}Pendiente{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3">Sin insumos</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-12">
+            <h5>Gastos <span class="badge bg-success text-white">{{ pending_expense_count }} pendientes</span></h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Proveedor</th>
+                            <th>Descripción</th>
+                            <th>Monto</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for gasto in gastos %}
+                        <tr>
+                            <td>{{ gasto.proveedor }}</td>
+                            <td>{{ gasto.descripcion|default:'-' }}</td>
+                            <td>{{ gasto.monto|floatformat:2 }}</td>
+                            <td>{% if gasto.pagado %}Pagado{% else %}Pendiente{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4">Sin gastos</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

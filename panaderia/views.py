@@ -388,13 +388,20 @@ class VentaReportView(AdminRequiredMixin, generic.TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         ventas = Venta.objects.prefetch_related('items__producto').all()
+        employee_insumos = EmployeeInsumo.objects.all()
+        gastos = Gasto.objects.all()
+        recursos = Panaderia_items.objects.all()
         fecha_inicio = self.request.GET.get('fecha_inicio')
         fecha_fin = self.request.GET.get('fecha_fin')
 
         if fecha_inicio:
             ventas = ventas.filter(fecha__gte=fecha_inicio)
+            employee_insumos = employee_insumos.filter(fecha__gte=fecha_inicio)
+            gastos = gastos.filter(fecha__gte=fecha_inicio)
         if fecha_fin:
             ventas = ventas.filter(fecha__lte=fecha_fin)
+            employee_insumos = employee_insumos.filter(fecha__lte=fecha_fin)
+            gastos = gastos.filter(fecha__lte=fecha_fin)
 
         context['ventas'] = ventas
         # Para el inventario: si se filtra por fecha, mostramos el stock correspondiente a ese periodo
@@ -427,7 +434,9 @@ class VentaReportView(AdminRequiredMixin, generic.TemplateView):
                 productos_snapshot.append({'nombre': producto.nombre, 'stock': producto.stock})
 
         context['productos'] = productos_snapshot
-        context['recursos'] = Panaderia_items.objects.all()
+        context['recursos'] = recursos.order_by('tipo_item', 'marca__nombre')
+        context['employee_insumos'] = employee_insumos.order_by('-fecha', '-created_at')
+        context['gastos'] = gastos.order_by('-fecha', '-created_at')
         context['fecha_inicio'] = fecha_inicio or ''
         context['fecha_fin'] = fecha_fin or ''
 
@@ -435,6 +444,10 @@ class VentaReportView(AdminRequiredMixin, generic.TemplateView):
         for venta in ventas:
             totals[venta.moneda] += float(venta.total)
         context['currency_totals'] = totals
+        context['employee_insumos_total'] = sum(float(item.costo) for item in employee_insumos)
+        context['gastos_total'] = sum(float(item.monto) for item in gastos)
+        context['pending_employee_count'] = employee_insumos.filter(pagado=False).count()
+        context['pending_expense_count'] = gastos.filter(pagado=False).count()
         return context
 
 
@@ -443,13 +456,19 @@ def export_report_pdf(request):
     ventas = Venta.objects.prefetch_related('items__producto').all()
     productos = Producto.objects.all()
     recursos = Panaderia_items.objects.all()
+    employee_insumos = EmployeeInsumo.objects.all()
+    gastos = Gasto.objects.all()
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
 
     if fecha_inicio:
         ventas = ventas.filter(fecha__gte=fecha_inicio)
+        employee_insumos = employee_insumos.filter(fecha__gte=fecha_inicio)
+        gastos = gastos.filter(fecha__gte=fecha_inicio)
     if fecha_fin:
         ventas = ventas.filter(fecha__lte=fecha_fin)
+        employee_insumos = employee_insumos.filter(fecha__lte=fecha_fin)
+        gastos = gastos.filter(fecha__lte=fecha_fin)
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=0.6 * inch, leftMargin=0.6 * inch, topMargin=0.6 * inch, bottomMargin=0.6 * inch)
@@ -550,16 +569,17 @@ def export_report_pdf(request):
     story.append(Spacer(1, 0.3 * inch))
 
     story.append(Paragraph('Inventario del Panadero (Recursos)', styles['Heading2']))
-    recurso_table_data = [['Tipo de Item', 'Marca', 'Cantidad']]
+    recurso_table_data = [['Tipo de Item', 'Marca', 'Cantidad', 'Stock']]
     for recurso in recursos:
         recurso_table_data.append([
-            recurso.get_tipo_item_display(),
+            recurso.tipo_item,
             recurso.marca.nombre if recurso.marca else '-',
             str(recurso.cantidad),
+            str(recurso.stock),
         ])
 
     if len(recurso_table_data) == 1:
-        recurso_table_data.append(['Sin recursos registrados', '', ''])
+        recurso_table_data.append(['Sin recursos registrados', '', '', ''])
 
     recurso_table = Table(recurso_table_data, repeatRows=1)
     recurso_table.setStyle(TableStyle([
@@ -572,6 +592,57 @@ def export_report_pdf(request):
         ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
     ]))
     story.append(recurso_table)
+    story.append(Spacer(1, 0.3 * inch))
+
+    story.append(Paragraph('Insumos de empleados', styles['Heading2']))
+    employee_table_data = [['Empleado', 'Descripción', 'Cantidad', 'Costo', 'Estado']]
+    for insumo in employee_insumos:
+        employee_table_data.append([
+            insumo.empleado,
+            insumo.descripcion or '-',
+            str(insumo.cantidad),
+            f"{insumo.costo:.2f}",
+            'Pagado' if insumo.pagado else 'Pendiente',
+        ])
+
+    if len(employee_table_data) == 1:
+        employee_table_data.append(['Sin insumos registrados', '', '', '', ''])
+
+    employee_table = Table(employee_table_data, repeatRows=1)
+    employee_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1976D2')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#D7C4A7')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
+    ]))
+    story.append(employee_table)
+    story.append(Spacer(1, 0.3 * inch))
+
+    story.append(Paragraph('Gastos', styles['Heading2']))
+    gasto_table_data = [['Proveedor', 'Descripción', 'Monto', 'Estado']]
+    for gasto in gastos:
+        gasto_table_data.append([
+            gasto.proveedor,
+            gasto.descripcion or '-',
+            f"{gasto.monto:.2f}",
+            'Pagado' if gasto.pagado else 'Pendiente',
+        ])
+
+    if len(gasto_table_data) == 1:
+        gasto_table_data.append(['Sin gastos registrados', '', '', ''])
+
+    gasto_table = Table(gasto_table_data, repeatRows=1)
+    gasto_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#388E3C')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#D7C4A7')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
+    ]))
+    story.append(gasto_table)
 
     doc.build(story)
     buffer.seek(0)
