@@ -13,7 +13,7 @@
             <label for="id_tipo" class="form-label">Tipo de marca</label>
             {{ form.tipo }}
             {{ form.tipo.errors }}
-            <div class="form-text">Selecciona si esta marca corresponde a Panadería, Nevera, Chucherías o Recursos.</div>
+            <div class="form-text">Selecciona si esta marca corresponde a Panadería, Nevera, Chucherías o Materia Prima.</div>
         </div>
         <button type="submit" class="btn btn-primary">Guardar</button>
         <a href="{% url 'panaderia:marca_list' %}" class="btn btn-secondary ms-2">Cancelar</a>

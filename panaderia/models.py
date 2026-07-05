@@ -134,6 +134,11 @@ class Panaderia_items(models.Model):
         verbose_name="Cantidad disponible",
         help_text='Cantidad disponible del insumo en la unidad seleccionada.',
     )
+    stock = models.PositiveIntegerField(
+        default=0,
+        verbose_name='Stock disponible',
+        help_text='Stock separado del peso o volumen. Indica cuántas unidades hay disponibles.',
+    )
     unidad = models.CharField(
         max_length=10,
         choices=UNIDAD_CHOICES,
@@ -147,7 +152,7 @@ class Panaderia_items(models.Model):
         verbose_name_plural = "Insumos de materia prima"
 
     def __str__(self):
-        return f"{self.tipo_item} - {self.cantidad} {self.get_unidad_display()}"
+        return f"{self.tipo_item} - {self.cantidad} {self.get_unidad_display()} (Stock {self.stock})"
 
     def clean(self):
         from django.core.exceptions import ValidationError
@@ -170,21 +175,21 @@ class Panaderia_items(models.Model):
 
     @property
     def stock_level(self):
-        if self.cantidad == 0:
+        if self.stock == 0:
             return 'Agotado'
-        if self.cantidad < 5:
+        if self.stock < 5:
             return 'Bajo'
-        if self.cantidad < 20:
+        if self.stock < 20:
             return 'Medio'
         return 'Alto'
 
     @property
     def stock_badge_class(self):
-        if self.cantidad == 0:
+        if self.stock == 0:
             return 'badge-out'
-        if self.cantidad < 5:
+        if self.stock < 5:
             return 'badge-low'
-        if self.cantidad < 20:
+        if self.stock < 20:
             return 'badge-medium'
         return 'badge-high'
 

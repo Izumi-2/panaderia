@@ -16,7 +16,8 @@
             <tr>
                 <th>Insumo de materia prima</th>
                 <th>Marca</th>
-                <th>Cantidad restante</th>
+                <th>Cantidad</th>
+                <th>Stock</th>
                 <th>Condición</th>
                 <th class="text-end">Acciones</th>
             </tr>
@@ -26,11 +27,13 @@
             <tr>
                 <td><strong>{{ recurso.tipo_item }}</strong></td>
                 <td>{{ recurso.marca.nombre }}</td>
+                <td>{{ recurso.cantidad }} {{ recurso.get_unidad_display }}</td>
                 <td>
-                    {{ recurso.cantidad }} {{ recurso.get_unidad_display }}
-                    <span class="badge {{ recurso.stock_badge_class }} ms-2">{{ recurso.stock_level }}</span>
+                    {{ recurso.stock }}
                 </td>
-                <td>{{ recurso.stock_level }}</td>
+                <td>
+                    <span class="badge {{ recurso.stock_badge_class }}">{{ recurso.stock_level }}</span>
+                </td>
                 <td class="text-end">
                     <a href="{% url 'panaderia:recurso_update' recurso.pk %}" class="btn btn-sm btn-warning">Editar</a>
                     <a href="{% url 'panaderia:recurso_delete' recurso.pk %}" class="btn btn-sm btn-danger">Eliminar</a>

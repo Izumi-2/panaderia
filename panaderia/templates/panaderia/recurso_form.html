@@ -54,6 +54,14 @@
                                 {{ form.cantidad.errors }}
                             </div>
                             <div>
+                                <label for="id_stock" class="form-label">Stock disponible</label>
+                                {{ form.stock }}
+                                {{ form.stock.errors }}
+                                <div class="form-text">Número de unidades disponibles separado del peso/volumen.</div>
+                            </div>
+                        </div>
+                        <div class="quantity-unit-wrapper mt-3">
+                            <div>
                                 <label for="id_unidad" class="form-label">Unidad</label>
                                 {{ form.unidad }}
                                 {{ form.unidad.errors }}

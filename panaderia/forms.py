@@ -95,7 +95,7 @@ class RecursoForm(forms.ModelForm):
 
     class Meta:
         model = Panaderia_items
-        fields = ['tipo_item', 'marca', 'cantidad', 'unidad']
+        fields = ['tipo_item', 'marca', 'cantidad', 'stock', 'unidad']
         widgets = {
             'marca': forms.Select(attrs={'class': 'form-select'}),
             'unidad': forms.Select(attrs={'class': 'form-select'}),
@@ -110,6 +110,9 @@ class RecursoForm(forms.ModelForm):
             'required': 'Debes seleccionar la marca del insumo.',
         }
         self.fields['unidad'].label = 'Unidad de medida'
+        self.fields['stock'].label = 'Stock disponible'
+        self.fields['stock'].widget = forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 12'})
+        self.fields['stock'].help_text = 'Número de unidades disponibles separado de la cantidad física.'
         self.fields['unidad'].error_messages = {
             'required': 'Debes seleccionar la unidad de medida.',
         }

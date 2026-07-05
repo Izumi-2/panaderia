@@ -44,7 +44,7 @@ class ChucheriaAdmin(admin.ModelAdmin):
 
 @admin.register(models.Panaderia_items)
 class Pitemsadmin(admin.ModelAdmin):
-    list_display = ("id", "tipo_item", "cantidad")
+    list_display = ("id", "tipo_item", "cantidad", "unidad", "stock")
 
 
 @admin.register(models.EmployeeInsumo)
