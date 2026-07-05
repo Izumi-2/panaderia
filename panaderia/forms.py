@@ -1,15 +1,14 @@
 from django import forms
-from .models import Producto, Marca, Bebida, Panaderia_items, Venta, VentaItem, EmployeeInsumo, Gasto
-from django.contrib.auth.models import User
 from django.contrib.auth.forms import SetPasswordForm
+
+from .models import Bebida, EmployeeInsumo, Gasto, Marca, Panaderia_items, Producto, Venta, VentaItem
 
 
 class SecurityWordForm(forms.Form):
-    security_word = forms.CharField(label='Palabra de seguridad', widget=forms.PasswordInput(attrs={'class':'form-control'}), max_length=128)
+    security_word = forms.CharField(label='Palabra de seguridad', widget=forms.PasswordInput(attrs={'class': 'form-control'}), max_length=128)
 
 
 class PasswordResetByWordForm(SetPasswordForm):
-    # inherits new_password1 and new_password2 fields
     pass
 
 
@@ -26,7 +25,6 @@ class MarcaForm(forms.ModelForm):
 class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto
-        # Removed 'precio' — inventory will be governed only by 'stock'
         fields = ['nombre', 'marca', 'categoria', 'stock']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del producto'}),
@@ -37,7 +35,6 @@ class ProductoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # ensure marca queryset is available
         self.fields['marca'].queryset = Marca.objects.all()
 
 
@@ -68,10 +65,7 @@ class RecursoForm(forms.ModelForm):
     tipo_item = forms.CharField(
         label='Insumo de materia prima',
         max_length=100,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Ej. Harina, Azúcar, Levadura, Huevos...',
-        }),
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Harina, Azúcar, Levadura, Huevos...'}),
         error_messages={
             'required': 'Debes ingresar el insumo de materia prima.',
             'max_length': 'El nombre del insumo no puede tener más de 100 caracteres.',
@@ -79,17 +73,13 @@ class RecursoForm(forms.ModelForm):
     )
     cantidad = forms.DecimalField(
         label='Cantidad disponible',
-        min_value=0.01,
+        min_value=0,
         max_digits=10,
         decimal_places=2,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Ej. 22',
-            'step': '0.01',
-        }),
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 22', 'step': '0.01'}),
         error_messages={
             'required': 'Debes ingresar la cantidad disponible.',
-            'min_value': 'La cantidad debe ser mayor que cero.',
+            'min_value': 'La cantidad no puede ser negativa.',
         },
     )
 
@@ -106,16 +96,12 @@ class RecursoForm(forms.ModelForm):
         self.fields['marca'].queryset = Marca.objects.filter(tipo='recurso')
         self.fields['marca'].label = 'Marca del insumo'
         self.fields['marca'].empty_label = 'Seleccione una marca'
-        self.fields['marca'].error_messages = {
-            'required': 'Debes seleccionar la marca del insumo.',
-        }
+        self.fields['marca'].error_messages = {'required': 'Debes seleccionar la marca del insumo.'}
         self.fields['unidad'].label = 'Unidad de medida'
         self.fields['stock'].label = 'Stock disponible'
         self.fields['stock'].widget = forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej. 12'})
         self.fields['stock'].help_text = 'Número de unidades disponibles separado de la cantidad física.'
-        self.fields['unidad'].error_messages = {
-            'required': 'Debes seleccionar la unidad de medida.',
-        }
+        self.fields['unidad'].error_messages = {'required': 'Debes seleccionar la unidad de medida.'}
 
     def clean_tipo_item(self):
         tipo_item = self.cleaned_data.get('tipo_item', '').strip()
@@ -160,9 +146,7 @@ class VentaItemForm(forms.ModelForm):
         producto = cleaned_data.get('producto')
         cantidad = cleaned_data.get('cantidad')
         if producto and cantidad is not None and cantidad > producto.stock:
-            raise forms.ValidationError(
-                f"Stock insuficiente para {producto.nombre}. Disponible: {producto.stock}."
-            )
+            raise forms.ValidationError(f'Stock insuficiente para {producto.nombre}. Disponible: {producto.stock}.')
         return cleaned_data
 
 
@@ -192,16 +176,16 @@ class GastoForm(forms.ModelForm):
 
 
 class ProfileConfigForm(forms.Form):
-    display_name = forms.CharField(label='Nombre para mostrar', required=False, max_length=150, widget=forms.TextInput(attrs={'class':'form-control'}))
-    phone = forms.CharField(label='Teléfono', required=False, max_length=30, widget=forms.TextInput(attrs={'class':'form-control'}))
-    location = forms.CharField(label='Ubicación', required=False, max_length=200, widget=forms.TextInput(attrs={'class':'form-control'}))
+    display_name = forms.CharField(label='Nombre para mostrar', required=False, max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    phone = forms.CharField(label='Teléfono', required=False, max_length=30, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    location = forms.CharField(label='Ubicación', required=False, max_length=200, widget=forms.TextInput(attrs={'class': 'form-control'}))
     receive_notifications = forms.BooleanField(label='Recibir notificaciones', required=False, widget=forms.CheckboxInput())
 
     def save(self, user):
+        from .models import Profile
+
         profile = getattr(user, 'profile', None)
         if profile is None:
-            # crear perfil si no existe
-            from .models import Profile
             profile = Profile.objects.create(user=user)
         config = profile.config or {}
         config.update({
