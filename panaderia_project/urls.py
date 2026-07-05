@@ -32,6 +32,7 @@ pan_urls = [
     path('chucherias/<int:pk>/eliminar/', pan_views.ChucheriaDeleteView.as_view(), name='chucheria_delete'),
     path('ventas/', pan_views.VentaListView.as_view(), name='venta_list'),
     path('ventas/nueva/', pan_views.VentaCreateView.as_view(), name='venta_create'),
+    path('insumos-gastos/', pan_views.insumos_gastos_dashboard, name='insumos_gastos'),
     path('reportes/', pan_views.VentaReportView.as_view(), name='reportes'),
     path('reportes/exportar-pdf/', pan_views.export_report_pdf, name='export_report_pdf'),
     path('ventas/cerrar/', pan_views.cerrar_ventas, name='cerrar_ventas'),

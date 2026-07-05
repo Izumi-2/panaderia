@@ -1,5 +1,5 @@
 from django import forms
-from .models import Producto, Marca, Bebida, Panaderia_items, Venta, VentaItem
+from .models import Producto, Marca, Bebida, Panaderia_items, Venta, VentaItem, EmployeeInsumo, Gasto
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import SetPasswordForm
 
@@ -161,6 +161,31 @@ class VentaItemForm(forms.ModelForm):
                 f"Stock insuficiente para {producto.nombre}. Disponible: {producto.stock}."
             )
         return cleaned_data
+
+
+class EmployeeInsumoForm(forms.ModelForm):
+    class Meta:
+        model = EmployeeInsumo
+        fields = ['empleado', 'descripcion', 'cantidad', 'costo', 'fecha']
+        widgets = {
+            'empleado': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del empleado'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Ej. Refresco o pan tomado por el empleado'}),
+            'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+            'costo': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        }
+
+
+class GastoForm(forms.ModelForm):
+    class Meta:
+        model = Gasto
+        fields = ['proveedor', 'descripcion', 'monto', 'fecha']
+        widgets = {
+            'proveedor': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del proveedor'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Ej. Pago por leche, queso, gas o refrescos'}),
+            'monto': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        }
 
 
 class ProfileConfigForm(forms.Form):

@@ -47,6 +47,18 @@ class Pitemsadmin(admin.ModelAdmin):
     list_display = ("id", "tipo_item", "cantidad")
 
 
+@admin.register(models.EmployeeInsumo)
+class EmployeeInsumoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'empleado', 'cantidad', 'costo', 'fecha', 'pagado')
+    list_filter = ('pagado', 'fecha')
+
+
+@admin.register(models.Gasto)
+class GastoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'proveedor', 'monto', 'fecha', 'pagado')
+    list_filter = ('pagado', 'fecha')
+
+
 @admin.register(models.Profile)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ('id', 'user')

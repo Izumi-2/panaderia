@@ -189,6 +189,47 @@ class Panaderia_items(models.Model):
         return 'badge-high'
 
 
+class EmployeeInsumo(models.Model):
+    empleado = models.CharField(max_length=150, verbose_name='Empleado')
+    descripcion = models.TextField(blank=True, verbose_name='Descripción')
+    cantidad = models.PositiveIntegerField(default=1, verbose_name='Cantidad')
+    costo = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Costo')
+    fecha = models.DateField(default=timezone.now, verbose_name='Fecha')
+    pagado = models.BooleanField(default=False, verbose_name='Pagado')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Insumo de empleado'
+        verbose_name_plural = 'Insumos de empleados'
+
+    def __str__(self):
+        return f"{self.empleado} - {self.descripcion or 'Sin detalle'}"
+
+    def marcar_pagado(self):
+        self.pagado = True
+        self.save(update_fields=['pagado'])
+
+
+class Gasto(models.Model):
+    proveedor = models.CharField(max_length=150, verbose_name='Proveedor')
+    descripcion = models.TextField(blank=True, verbose_name='Descripción')
+    monto = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Monto')
+    fecha = models.DateField(default=timezone.now, verbose_name='Fecha')
+    pagado = models.BooleanField(default=False, verbose_name='Pagado')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Gasto'
+        verbose_name_plural = 'Gastos'
+
+    def __str__(self):
+        return f"{self.proveedor} - {self.descripcion or 'Sin detalle'}"
+
+    def marcar_pagado(self):
+        self.pagado = True
+        self.save(update_fields=['pagado'])
+
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     security_word_hash = models.CharField(max_length=128, blank=True, null=True)

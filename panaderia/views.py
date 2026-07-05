@@ -23,9 +23,9 @@ from django.shortcuts import redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.forms import UserCreationForm
 from .forms import SecurityWordForm, PasswordResetByWordForm, ProfileConfigForm
-from .models import Producto, Marca, Panaderia_items, Bebida, Chucheria, Venta, VentaItem
+from .models import Producto, Marca, Panaderia_items, Bebida, Chucheria, Venta, VentaItem, EmployeeInsumo, Gasto
 from .models import Backup
-from .forms import ProductoForm, BebidaForm, MarcaForm, RecursoForm, VentaForm, VentaItemForm
+from .forms import ProductoForm, BebidaForm, MarcaForm, RecursoForm, VentaForm, VentaItemForm, EmployeeInsumoForm, GastoForm
 
 
 def parse_target_date(date_str):
@@ -259,6 +259,46 @@ class RecursoDeleteView(AdminRequiredMixin, generic.DeleteView):
     model = Panaderia_items
     template_name = 'panaderia/recurso_confirm_delete.html'
     success_url = reverse_lazy('panaderia:recurso_list')
+
+
+@admin_required
+def insumos_gastos_dashboard(request):
+    if request.method == 'POST':
+        if 'mark_employee_paid' in request.POST:
+            insumo = get_object_or_404(EmployeeInsumo, pk=request.POST.get('record_id'))
+            insumo.marcar_pagado()
+            messages.success(request, 'Insumo marcado como pagado.')
+        elif 'mark_expense_paid' in request.POST:
+            gasto = get_object_or_404(Gasto, pk=request.POST.get('record_id'))
+            gasto.marcar_pagado()
+            messages.success(request, 'Gasto marcado como pagado.')
+        elif request.POST.get('form_type') == 'employee':
+            form = EmployeeInsumoForm(request.POST)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Insumo de empleado registrado correctamente.')
+            else:
+                messages.error(request, 'Revisa los datos del insumo de empleado.')
+        elif request.POST.get('form_type') == 'expense':
+            form = GastoForm(request.POST)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Gasto registrado correctamente.')
+            else:
+                messages.error(request, 'Revisa los datos del gasto.')
+        return redirect('panaderia:insumos_gastos')
+
+    employee_insumos = EmployeeInsumo.objects.order_by('-fecha', '-created_at')
+    gastos = Gasto.objects.order_by('-fecha', '-created_at')
+    context = {
+        'employee_insumos': employee_insumos,
+        'gastos': gastos,
+        'employee_form': EmployeeInsumoForm(),
+        'expense_form': GastoForm(),
+        'pending_employee_count': employee_insumos.filter(pagado=False).count(),
+        'pending_expense_count': gastos.filter(pagado=False).count(),
+    }
+    return render(request, 'panaderia/insumos_gastos.html', context)
 
 
 class VentaListView(AdminRequiredMixin, generic.ListView):

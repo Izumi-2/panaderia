@@ -1,0 +1,119 @@
+body {
+    background: linear-gradient(180deg, #fff8e8 0%, #fff1d1 100%);
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.summary-card {
+    padding: 1.25rem;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.95);
+    box-shadow: 0 14px 32px rgba(88,58,40,0.08);
+}
+
+.summary-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #6b4b3f;
+    margin-bottom: 0.25rem;
+}
+
+.section-card {
+    padding: 1.2rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.section-description {
+    color: #7f665b;
+    font-size: 0.95rem;
+    margin-bottom: 0;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.record-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.record-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 16px;
+    border: 1px solid rgba(141, 110, 99, 0.18);
+    background: #fffdfa;
+}
+
+.record-card.pending {
+    border-left: 5px solid #f0a500;
+}
+
+.record-card.paid {
+    border-left: 5px solid #4caf50;
+}
+
+.record-card h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.2rem;
+}
+
+.record-card p {
+    margin: 0 0 0.25rem;
+    color: #6d4c41;
+}
+
+.record-card small {
+    color: #8b6b5a;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    background: #e7f7ea;
+    color: #2e7d32;
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+
+.empty-state {
+    color: #8b6b5a;
+    font-style: italic;
+    margin: 0;
+}
+
+@media (max-width: 767px) {
+    .summary-grid,
+    .form-grid,
+    .card-grid {
+        grid-template-columns: 1fr;
+        display: grid;
+    }
+
+    .record-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
