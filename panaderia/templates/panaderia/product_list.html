@@ -26,25 +26,43 @@
     <div class="col-md-9">
         <div class="card p-3">
             <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Marca</th>
-                        <th>Categoría</th>
-                        <th>Stock</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
+                <form method="post" action="{% url 'panaderia:close_day_products' %}" id="cierre-jornada-form">
+                    {% csrf_token %}
+                    <table class="table table-hover">
+                        <thead>
+                        <tr>
+                                <th>Nombre</th>
+                                <th>Marca</th>
+                                <th>Categoría</th>
+                                <th>Existencia mañana</th>
+                                <th>Entrada mañana</th>
+                                <th>Entrada tarde</th>
+                                <th>Total ingresados</th>
+                                <th>Sobrante noche</th>
+                                <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                     {% for producto in productos %}
-                    <tr>
+                    <tr class="producto-row" data-id="{{ producto.pk }}">
                         <td>{{ producto.nombre }}</td>
                         <td>{{ producto.marca.nombre|default:"N/A" }}</td>
                         <td>{{ producto.get_categoria_display }}</td>
                         <td>
-                            {{ producto.stock }}
-                            <span class="badge {{ producto.stock_badge_class }} ms-2">{{ producto.stock_level }}</span>
+                            <input type="number" min="0" class="form-control existencia-manana" data-id="{{ producto.pk }}" value="{{ producto.existencia_manana }}" readonly>
+                        </td>
+                        <td>
+                            <input type="number" min="0" class="form-control entrada-manana" data-id="{{ producto.pk }}" value="{{ producto.entrada_manana }}" readonly>
+                        </td>
+                        <td>
+                            <input type="number" min="0" class="form-control entrada-tarde" data-id="{{ producto.pk }}" value="{{ producto.entrada_tarde }}" readonly>
+                        </td>
+                        <td>
+                            <span class="total-ingresados">0</span>
+                        </td>
+                        <td>
+                            <span class="sobrante-noche">0</span>
+                            <input type="hidden" name="sobrante_{{ producto.pk }}" class="surplus-value" value="0">
                         </td>
                         <td>
                             <a href="{% url 'panaderia:product_detail' producto.pk %}" class="btn btn-sm btn-info">Ver</a>
@@ -53,10 +71,55 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="text-center">No hay productos registrados.</td></tr>
+                    <tr><td colspan="9" class="text-center">No hay productos registrados.</td></tr>
                     {% endfor %}
                 </tbody>
+                <tfoot>
+                    <tr class="table-active">
+                        <td colspan="6" class="text-end"><strong>Totales:</strong></td>
+                        <td><strong id="total-ingresados-general">0</strong></td>
+                        <td><strong id="total-sobrante-general">0</strong></td>
+                        <td colspan="1"></td>
+                    </tr>
+                </tfoot>
             </table>
+            <div class="text-end mt-3">
+                <button type="submit" class="btn btn-success">Cerrar jornada</button>
+            </div>
+            </form>
+            <script>
+            document.addEventListener('DOMContentLoaded', function(){
+                function toInt(v){ var n = parseInt(v,10); return isNaN(n)?0:n; }
+                function updateRow(row){
+                    var existencia = toInt(row.querySelector('.existencia-manana').value);
+                    var entMan = toInt(row.querySelector('.entrada-manana').value);
+                    var entTar = toInt(row.querySelector('.entrada-tarde').value);
+                    var totalIng = entMan + entTar;
+                    var sobrante = existencia + totalIng;
+                    row.querySelector('.total-ingresados').textContent = totalIng;
+                    row.querySelector('.sobrante-noche').textContent = sobrante;
+                    var hiddenInput = row.querySelector('.surplus-value');
+                    if (hiddenInput) {
+                        hiddenInput.value = sobrante;
+                    }
+                }
+                function updateTotals(){
+                    var totalIngGen = 0; var totalSobrGen = 0;
+                    document.querySelectorAll('.producto-row').forEach(function(row){
+                        var t = toInt(row.querySelector('.total-ingresados').textContent);
+                        var s = toInt(row.querySelector('.sobrante-noche').textContent);
+                        totalIngGen += t; totalSobrGen += s;
+                    });
+                    document.getElementById('total-ingresados-general').textContent = totalIngGen;
+                    document.getElementById('total-sobrante-general').textContent = totalSobrGen;
+                }
+                document.querySelectorAll('.existencia-manana, .entrada-manana, .entrada-tarde').forEach(function(input){
+                    input.addEventListener('input', function(e){ var row = e.target.closest('.producto-row'); if(!row) return; updateRow(row); updateTotals(); });
+                });
+                document.querySelectorAll('.producto-row').forEach(function(row){ updateRow(row); });
+                updateTotals();
+            });
+            </script>
             <div class="text-end">
                 <a href="{% url 'panaderia:product_create' %}" class="btn btn-primary">Agregar Nuevo Producto</a>
             </div>

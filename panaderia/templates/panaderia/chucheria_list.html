@@ -17,32 +17,106 @@
                 <th>Nombre</th>
                 <th>Marca</th>
                 <th>Descripción</th>
-                <th>Stock</th>
+                <th>Existencia mañana</th>
+                <th>Entrada mañana</th>
+                <th>Entrada tarde</th>
+                <th>Total ingresados</th>
+                <th>Sobrante noche</th>
                 <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for chucheria in chucherias %}
-            <tr>
+            <tr class="producto-row" data-id="{{ chucheria.pk }}">
                 <td>{{ chucheria.nombre }}</td>
                 <td>{{ chucheria.marca.nombre|default:"N/A" }}</td>
                 <td>{{ chucheria.descripcion|default:"N/A" }}</td>
                 <td>
-                    {{ chucheria.stock }}
-                    <span class="badge {{ chucheria.stock_badge_class }} ms-2">{{ chucheria.stock_level }}</span>
+                    <input type="number" min="0" class="form-control existencia-manana" data-id="{{ chucheria.pk }}" value="0">
                 </td>
                 <td>
+                    <input type="number" min="0" class="form-control entrada-manana" data-id="{{ chucheria.pk }}" value="0">
+                </td>
+                <td>
+                    <input type="number" min="0" class="form-control entrada-tarde" data-id="{{ chucheria.pk }}" value="0">
+                </td>
+                <td>
+                    <span class="total-ingresados">0</span>
+                </td>
+                <td>
+                    <span class="sobrante-noche">0</span>
+                </td>
+                <td>
+                    <form method="post" action="{% url 'panaderia:apply_surplus_chucheria' chucheria.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="sobrante" class="surplus-value" value="0">
+                        <button type="submit" class="btn btn-sm btn-success">Sobrante noche</button>
+                    </form>
                     <a href="{% url 'panaderia:chucheria_update' chucheria.pk %}" class="btn btn-sm btn-warning">Editar</a>
                     <a href="{% url 'panaderia:chucheria_delete' chucheria.pk %}" class="btn btn-sm btn-danger">Eliminar</a>
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="5" class="text-center">No hay chucherías registradas.</td></tr>
+            <tr><td colspan="9" class="text-center">No hay chucherías registradas.</td></tr>
             {% endfor %}
         </tbody>
-    </table>
+        <tfoot>
+            <tr class="table-active">
+                <td colspan="6" class="text-end"><strong>Totales:</strong></td>
+                <td><strong id="total-ingresados-general">0</strong></td>
+                <td><strong id="total-sobrante-general">0</strong></td>
+                <td colspan="1"></td>
+            </tr>
+        </tfoot>
+        </table>
+    </div>
     <div class="text-end">
         <a href="{% url 'panaderia:chucheria_create' %}" class="btn btn-primary">Agregar Nueva Chuchería</a>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    function toInt(v){
+        var n = parseInt(v,10);
+        return isNaN(n)?0:n;
+    }
+
+    function updateRow(row){
+        var existencia = toInt(row.querySelector('.existencia-manana').value);
+        var entMan = toInt(row.querySelector('.entrada-manana').value);
+        var entTar = toInt(row.querySelector('.entrada-tarde').value);
+        var totalIng = entMan + entTar;
+        var sobrante = existencia + totalIng;
+        row.querySelector('.total-ingresados').textContent = totalIng;
+        row.querySelector('.sobrante-noche').textContent = sobrante;
+        row.querySelectorAll('.surplus-value').forEach(function(input){ input.value = sobrante; });
+    }
+
+    function updateTotals(){
+        var totalIngGen = 0;
+        var totalSobrGen = 0;
+        document.querySelectorAll('.producto-row').forEach(function(row){
+            var t = toInt(row.querySelector('.total-ingresados').textContent);
+            var s = toInt(row.querySelector('.sobrante-noche').textContent);
+            totalIngGen += t;
+            totalSobrGen += s;
+        });
+        document.getElementById('total-ingresados-general').textContent = totalIngGen;
+        document.getElementById('total-sobrante-general').textContent = totalSobrGen;
+    }
+
+    document.querySelectorAll('.existencia-manana, .entrada-manana, .entrada-tarde').forEach(function(input){
+        input.addEventListener('input', function(e){
+            var row = e.target.closest('.producto-row');
+            if(!row) return;
+            updateRow(row);
+            updateTotals();
+        });
+    });
+
+    // initialize values
+    document.querySelectorAll('.producto-row').forEach(function(row){ updateRow(row); });
+    updateTotals();
+});
+</script>
 {% endblock %}

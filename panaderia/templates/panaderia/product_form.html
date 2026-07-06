@@ -53,11 +53,36 @@
                     <div class="section-card p-4">
                         <h5 class="section-title">Detalle de inventario</h5>
                         <div class="row g-3">
-                            <div class="col-12">
-                                <label for="id_stock" class="form-label">Stock</label>
+                            <div class="col-12 d-none">
                                 {{ form.stock }}
                                 {{ form.stock.errors }}
-                                <div class="form-text">La gestión se realiza únicamente por stock; el precio no se solicita.</div>
+                            </div>
+                            <div class="col-12 mt-3">
+                                <label class="form-label">Registrar existencia</label>
+                                <div class="form-text mb-2">Ingresa la existencia de la mañana. Si tienes entradas de mañana o tarde, se sumarán para calcular el stock total que se usará en ventas.</div>
+                                <div class="row g-2">
+                                    <div class="col-4">
+                                        <label class="form-label small">Existencia mañana</label>
+                                        <input type="number" min="0" class="form-control existencia-manana" name="existencia_manana" id="id_existencia_manana" value="{% if form.instance.pk %}{{ form.instance.existencia_manana }}{% else %}0{% endif %}" {% if form.instance.pk %}readonly{% endif %}>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label small">Entrada mañana</label>
+                                        <input type="number" min="0" class="form-control entrada-manana" name="entrada_manana" id="id_entrada_manana" value="{% if form.instance.pk %}{{ form.instance.entrada_manana }}{% else %}0{% endif %}">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label small">Entrada tarde</label>
+                                        <input type="number" min="0" class="form-control entrada-tarde" name="entrada_tarde" id="id_entrada_tarde" value="{% if form.instance.pk %}{{ form.instance.entrada_tarde }}{% else %}0{% endif %}">
+                                    </div>
+                                </div>
+                                <div class="mt-2 small">
+                                    Total ingresados: <strong class="total-ingresados">0</strong>
+                                    &nbsp;|&nbsp; Sobrante noche: <strong class="sobrante-noche">0</strong>
+                                </div>
+                                {% if form.instance.pk %}
+                                <div class="mt-1 small text-muted">
+                                    Esta es la existencia de la mañana actual. Para actualizar el stock, ingresa sólo entrada mañana y/o entrada tarde.
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -70,4 +95,24 @@
         </form>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    function toInt(v){ var n = parseInt(v,10); return isNaN(n)?0:n; }
+    function update(){
+        var existencia = toInt(document.querySelector('.existencia-manana').value);
+        var e1 = toInt(document.querySelector('.entrada-manana').value);
+        var e2 = toInt(document.querySelector('.entrada-tarde').value);
+        var total = e1 + e2;
+        var sobr = existencia + total;
+        document.querySelector('.total-ingresados').textContent = total;
+        document.querySelector('.sobrante-noche').textContent = sobr;
+        var stockField = document.getElementById('id_stock');
+        if (stockField) {
+            stockField.value = sobr;
+        }
+    }
+    document.querySelectorAll('.existencia-manana, .entrada-manana, .entrada-tarde').forEach(function(i){ i.addEventListener('input', update); });
+    update();
+});
+</script>
 {% endblock %}

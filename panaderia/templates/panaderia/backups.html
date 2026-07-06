@@ -20,6 +20,7 @@
             <form action="{% url 'panaderia:upload_backup' %}" method="post" enctype="multipart/form-data" class="d-inline">
                 {% csrf_token %}
                 <input type="file" name="backup_file" accept=".sqlite3,.db" required>
+                <label class="ms-2 me-1"><input type="checkbox" name="import" value="1"> Importar inventario</label>
                 <button type="submit" class="btn btn-outline-secondary">Subir respaldo</button>
             </form>
         </div>

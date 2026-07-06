@@ -123,12 +123,48 @@ class ProductCreateView(AdminRequiredMixin, generic.CreateView):
     template_name = 'panaderia/product_form.html'
     success_url = reverse_lazy('panaderia:product_list')
 
+    def form_valid(self, form):
+        request = self.request
+        try:
+            existencia = int(request.POST.get('existencia_manana', 0))
+        except (TypeError, ValueError):
+            existencia = 0
+        try:
+            entrada_manana = int(request.POST.get('entrada_manana', 0))
+        except (TypeError, ValueError):
+            entrada_manana = 0
+        try:
+            entrada_tarde = int(request.POST.get('entrada_tarde', 0))
+        except (TypeError, ValueError):
+            entrada_tarde = 0
+        form.instance.existencia_manana = existencia
+        form.instance.entrada_manana = entrada_manana
+        form.instance.entrada_tarde = entrada_tarde
+        form.instance.stock = max(0, existencia + entrada_manana + entrada_tarde)
+        return super().form_valid(form)
+
 
 class ProductUpdateView(AdminRequiredMixin, generic.UpdateView):
     model = Producto
     form_class = ProductoForm
     template_name = 'panaderia/product_form.html'
     success_url = reverse_lazy('panaderia:product_list')
+
+    def form_valid(self, form):
+        request = self.request
+        existencia = form.instance.existencia_manana
+        try:
+            entrada_manana = int(request.POST.get('entrada_manana', form.instance.entrada_manana))
+        except (TypeError, ValueError):
+            entrada_manana = form.instance.entrada_manana
+        try:
+            entrada_tarde = int(request.POST.get('entrada_tarde', form.instance.entrada_tarde))
+        except (TypeError, ValueError):
+            entrada_tarde = form.instance.entrada_tarde
+        form.instance.entrada_manana = entrada_manana
+        form.instance.entrada_tarde = entrada_tarde
+        form.instance.stock = max(0, existencia + entrada_manana + entrada_tarde)
+        return super().form_valid(form)
 
 
 class SignUpView(generic.CreateView):
@@ -173,6 +209,51 @@ class ProductDeleteView(AdminRequiredMixin, generic.DeleteView):
     success_url = reverse_lazy('panaderia:product_list')
 
 
+@admin_required
+def apply_surplus_product(request, pk):
+    producto = get_object_or_404(Producto, pk=pk)
+    if request.method == 'POST':
+        try:
+            sobrante = int(request.POST.get('sobrante', 0))
+        except (TypeError, ValueError):
+            sobrante = 0
+        if sobrante < 0:
+            sobrante = 0
+        producto.stock = sobrante
+        producto.save(update_fields=['stock'])
+        messages.success(request, f'Sobrante de la noche aplicado a {producto.nombre}.')
+    return redirect('panaderia:product_list')
+
+
+@admin_required
+def close_day_products(request):
+    if request.method != 'POST':
+        return redirect('panaderia:product_list')
+
+    updated = 0
+    for key, value in request.POST.items():
+        if not key.startswith('sobrante_'):
+            continue
+        try:
+            producto_pk = int(key.split('_', 1)[1])
+            sobrante = int(value)
+        except (ValueError, TypeError):
+            continue
+        if sobrante < 0:
+            sobrante = 0
+        producto = Producto.objects.filter(pk=producto_pk).first()
+        if producto:
+            producto.stock = sobrante
+            producto.existencia_manana = sobrante
+            producto.entrada_manana = 0
+            producto.entrada_tarde = 0
+            producto.save(update_fields=['stock', 'existencia_manana', 'entrada_manana', 'entrada_tarde'])
+            updated += 1
+
+    messages.success(request, f'Cierre de jornada aplicado a {updated} producto(s).')
+    return redirect('panaderia:product_list')
+
+
 class ProductDetailView(AdminRequiredMixin, generic.DetailView):
     model = Producto
     template_name = 'panaderia/product_detail.html'
@@ -184,10 +265,42 @@ class BebidaListView(AdminRequiredMixin, generic.ListView):
     context_object_name = 'neveras'
 
 
+@admin_required
+def apply_surplus_nevera(request, pk):
+    bebida = get_object_or_404(Bebida, pk=pk)
+    if request.method == 'POST':
+        try:
+            sobrante = int(request.POST.get('sobrante', 0))
+        except (TypeError, ValueError):
+            sobrante = 0
+        if sobrante < 0:
+            sobrante = 0
+        bebida.stock = sobrante
+        bebida.save(update_fields=['stock'])
+        messages.success(request, f'Sobrante de la noche aplicado a {bebida.nombre}.')
+    return redirect('panaderia:nevera_list')
+
+
 class ChucheriaListView(AdminRequiredMixin, generic.ListView):
     model = Chucheria
     template_name = 'panaderia/chucheria_list.html'
     context_object_name = 'chucherias'
+
+
+@admin_required
+def apply_surplus_chucheria(request, pk):
+    chucheria = get_object_or_404(Chucheria, pk=pk)
+    if request.method == 'POST':
+        try:
+            sobrante = int(request.POST.get('sobrante', 0))
+        except (TypeError, ValueError):
+            sobrante = 0
+        if sobrante < 0:
+            sobrante = 0
+        chucheria.stock = sobrante
+        chucheria.save(update_fields=['stock'])
+        messages.success(request, f'Sobrante de la noche aplicado a {chucheria.nombre}.')
+    return redirect('panaderia:chucheria_list')
 
 
 class ChucheriaUpdateView(AdminRequiredMixin, generic.UpdateView):
@@ -776,6 +889,49 @@ def upload_backup(request):
                     out.write(chunk)
             backup = Backup.objects.create(file=f'backups/{f.name}', created_by=request.user)
             messages.success(request, 'Respaldo subido correctamente.')
+            # Si se solicita importar datos desde el respaldo, intentar sincronizar inventario
+            try:
+                do_import = request.POST.get('import') == '1' or request.GET.get('import') == '1'
+            except Exception:
+                do_import = False
+            if do_import:
+                import sqlite3
+                from django.db import transaction
+                updated = 0
+                created_count = 0
+                try:
+                    conn = sqlite3.connect(dest_path)
+                    cur = conn.cursor()
+                    # Intentar leer la tabla Django `panaderia_producto` (nombre, stock, categoria, marca_id, sabor)
+                    cur.execute("SELECT id, nombre, stock, categoria, marca_id FROM panaderia_producto")
+                    rows = cur.fetchall()
+                    conn.close()
+
+                    from .models import Producto, Marca
+                    with transaction.atomic():
+                        for r in rows:
+                            _, nombre, stock_val, categoria, marca_id = r
+                            if nombre is None:
+                                continue
+                            nombre = str(nombre).strip()
+                            try:
+                                prod = Producto.objects.get(nombre=nombre)
+                                prod.stock = int(stock_val) if stock_val is not None else prod.stock
+                                prod.save(update_fields=['stock'])
+                                updated += 1
+                            except Producto.DoesNotExist:
+                                # crear producto mínimo si no existe
+                                marca_obj = None
+                                if marca_id:
+                                    try:
+                                        marca_obj = Marca.objects.get(pk=marca_id)
+                                    except Exception:
+                                        marca_obj = None
+                                prod = Producto.objects.create(nombre=nombre, stock=int(stock_val) if stock_val is not None else 0, categoria=categoria or 'pan_salado', marca=marca_obj)
+                                created_count += 1
+                    messages.success(request, f'Importación desde respaldo: {updated} actualizados, {created_count} creados.')
+                except Exception as e:
+                    messages.error(request, f'Error al importar datos desde el respaldo: {e}')
     return redirect('panaderia:backups')
 
 

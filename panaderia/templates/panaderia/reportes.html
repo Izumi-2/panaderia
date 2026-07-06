@@ -84,31 +84,77 @@
         <div class="col-lg-6">
             <h5>Inventario general</h5>
             <div class="table-responsive">
-                <table class="table table-sm table-bordered">
+                <table class="table table-sm table-bordered" id="inventario-table">
                     <thead>
                         <tr>
                             <th>Producto</th>
-                            {% if fecha_inicio %}
-                                <th>Stock (al {{ fecha_inicio }})</th>
-                            {% else %}
-                                <th>Stock actual</th>
-                            {% endif %}
+                            <th>Existencia mañana</th>
+                            <th>Entrada mañana</th>
+                            <th>Entrada tarde</th>
+                            <th>Total ingresados</th>
+                            <th>Sobrante noche</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for producto in productos %}
                         <tr>
                             <td>{{ producto.nombre }}</td>
-                            <td>{{ producto.stock }}</td>
+                            <td><input type="number" min="0" class="form-control form-control-sm existencia-manana" value="{{ producto.stock }}"></td>
+                            <td><input type="number" min="0" class="form-control form-control-sm entrada-manana" value="0"></td>
+                            <td><input type="number" min="0" class="form-control form-control-sm entrada-tarde" value="0"></td>
+                            <td class="text-center"><span class="total-ingresados">0</span></td>
+                            <td class="text-center"><span class="sobrante-noche">0</span></td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="2">Sin productos</td></tr>
+                        <tr><td colspan="6">Sin productos</td></tr>
                         {% endfor %}
                     </tbody>
+                    <tfoot>
+                        <tr class="table-active">
+                            <td class="text-end" colspan="4"><strong>Totales:</strong></td>
+                            <td id="total-ingresados-report" class="text-center">0</td>
+                            <td id="total-sobrante-report" class="text-center">0</td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
     </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function(){
+        function toInt(v){ var n = parseInt(v,10); return isNaN(n)?0:n; }
+        function updateRow(row){
+            var existencia = toInt(row.querySelector('.existencia-manana').value);
+            var e1 = toInt(row.querySelector('.entrada-manana').value);
+            var e2 = toInt(row.querySelector('.entrada-tarde').value);
+            var total = e1 + e2;
+            var sobr = existencia + total;
+            row.querySelector('.total-ingresados').textContent = total;
+            row.querySelector('.sobrante-noche').textContent = sobr;
+        }
+        function updateTotals(){
+            var totalIng = 0; var totalSobr = 0;
+            document.querySelectorAll('#inventario-table tbody tr').forEach(function(row){
+                var t = toInt(row.querySelector('.total-ingresados').textContent);
+                var s = toInt(row.querySelector('.sobrante-noche').textContent);
+                totalIng += t; totalSobr += s;
+            });
+            document.getElementById('total-ingresados-report').textContent = totalIng;
+            document.getElementById('total-sobrante-report').textContent = totalSobr;
+        }
+        document.querySelectorAll('#inventario-table tbody').forEach(function(tbody){
+            tbody.addEventListener('input', function(e){
+                if(e.target.matches('.existencia-manana, .entrada-manana, .entrada-tarde')){
+                    var row = e.target.closest('tr'); if(!row) return; updateRow(row); updateTotals();
+                }
+            });
+        });
+        // initialize
+        document.querySelectorAll('#inventario-table tbody tr').forEach(function(row){ updateRow(row); });
+        updateTotals();
+    });
+    </script>
 
     <div class="row g-4 mt-2">
         <div class="col-lg-6">

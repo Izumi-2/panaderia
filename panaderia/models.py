@@ -34,6 +34,9 @@ class Producto(models.Model):
     ]
 
     nombre = models.CharField(max_length=150, verbose_name='Nombre')
+    existencia_manana = models.PositiveIntegerField(default=0, verbose_name='Existencia mañana')
+    entrada_manana = models.PositiveIntegerField(default=0, verbose_name='Entrada mañana')
+    entrada_tarde = models.PositiveIntegerField(default=0, verbose_name='Entrada tarde')
     stock = models.PositiveIntegerField(default=0, verbose_name='Stock disponible')
     marca = models.ForeignKey(Marca, null=True, blank=True, on_delete=models.SET_NULL, related_name='productos')
     categoria = models.CharField(max_length=20, choices=CATEGORIA_CHOICES, default='pan_salado', verbose_name='Categoría')
@@ -129,6 +132,26 @@ class VentaItem(models.Model):
             self.producto.save(update_fields=['stock'])
             return True
         return False
+
+    def __init__(self, *args, **kwargs):
+        # Compatibilidad: aceptar alias inesperado 'producto_model' si aparece
+        if 'producto_model' in kwargs and 'producto' not in kwargs:
+            kwargs['producto'] = kwargs.pop('producto_model')
+            try:
+                _Producto = Producto
+            except Exception:
+                _Producto = None
+            if 'producto' in kwargs and _Producto is not None and not isinstance(kwargs['producto'], _Producto):
+                pid = kwargs.pop('producto_id', None) or kwargs.get('producto_id')
+                try:
+                    if pid is not None:
+                        kwargs['producto'] = _Producto.objects.get(pk=pid)
+                    else:
+                        val = kwargs['producto']
+                        kwargs['producto'] = _Producto.objects.filter(nombre=str(val)).first() or kwargs['producto']
+                except Exception:
+                    pass
+        super().__init__(*args, **kwargs)
 
 
 class Panaderia_items(models.Model):
