@@ -1,5 +1,9 @@
+import os
+import sqlite3
+import tempfile
 from decimal import Decimal
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -13,16 +17,17 @@ class VentaItemStockTests(TestCase):
             nombre='Coca Cola',
             marca=self.marca,
             stock=10,
+            existencia_manana=10,
             volumen_ml=500,
             categoria='bebida',
         )
         self.producto = Producto.objects.create(
             nombre='Pan de prueba',
             marca=self.marca,
-            existencia_manana=2,
+            existencia_manana=6,
             entrada_manana=3,
             entrada_tarde=1,
-            stock=6,
+            stock=10,
             categoria='pan_salado',
         )
         self.venta = Venta.objects.create(moneda='COP', fecha=timezone.now(), observacion='Venta de prueba')
@@ -38,6 +43,7 @@ class VentaItemStockTests(TestCase):
         item.apply_stock_change()
         self.bebida.refresh_from_db()
         self.assertEqual(self.bebida.stock, 7)
+        self.assertEqual(self.bebida.existencia_manana, 7)
 
     def test_sale_item_decreases_stock_for_producto(self):
         item = VentaItem.objects.create(
@@ -49,7 +55,8 @@ class VentaItemStockTests(TestCase):
         )
         item.apply_stock_change()
         self.producto.refresh_from_db()
-        self.assertEqual(self.producto.stock, 4)
+        self.assertEqual(self.producto.stock, 8)
+        self.assertEqual(self.producto.existencia_manana, 4)
 
 
 class InsumoYGastoTests(TestCase):
@@ -202,29 +209,109 @@ class SurplusTransferTests(TestCase):
         self.assertContains(list_response, 'value="2"')
         self.assertContains(list_response, 'value="1"')
 
-    def test_apply_surplus_updates_nevera_stock(self):
+    def test_inventory_values_can_be_updated_directly_from_list(self):
         self.client.force_login(self.user)
         response = self.client.post(
-            reverse('panaderia:apply_surplus_nevera', args=[self.nevera.pk]),
-            {'sobrante': 12},
-            follow=True,
+            reverse('panaderia:update_inventory'),
+            {
+                'model_type': 'producto',
+                'pk': self.producto.pk,
+                'existencia_manana': '10',
+                'entrada_manana': '4',
+                'entrada_tarde': '2',
+            },
         )
 
-        self.assertRedirects(response, reverse('panaderia:nevera_list'))
-        self.nevera.refresh_from_db()
-        self.assertEqual(self.nevera.stock, 12)
+        self.assertEqual(response.status_code, 200)
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.existencia_manana, 10)
+        self.assertEqual(self.producto.entrada_manana, 4)
+        self.assertEqual(self.producto.entrada_tarde, 2)
+        self.assertEqual(self.producto.stock, 16)
 
-    def test_apply_surplus_updates_chucheria_stock(self):
+
+class BackupsSalesTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='adminbackups',
+            password='secret123',
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.marca = Marca.objects.create(nombre='Marca backup', tipo='panaderia')
+        self.producto = Producto.objects.create(
+            nombre='Pan backup',
+            marca=self.marca,
+            existencia_manana=5,
+            entrada_manana=2,
+            entrada_tarde=1,
+            stock=8,
+            categoria='pan_salado',
+        )
+        self.venta = Venta.objects.create(moneda='COP', fecha=timezone.now(), observacion='Venta de backup')
+        VentaItem.objects.create(
+            venta=self.venta,
+            producto=self.producto,
+            cantidad=2,
+            precio_unitario=Decimal('3000'),
+            moneda='COP',
+        )
+
+    def test_backups_page_includes_sales_history(self):
         self.client.force_login(self.user)
-        response = self.client.post(
-            reverse('panaderia:apply_surplus_chucheria', args=[self.chucheria.pk]),
-            {'sobrante': 9},
-            follow=True,
+        response = self.client.get(reverse('panaderia:backups'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('ventas', response.context)
+        self.assertEqual(response.context['ventas'].count(), 1)
+        self.assertEqual(response.context['ventas_totales']['items'], 1)
+
+
+class BackupImportTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='adminbackupimport',
+            password='secret123',
+            is_staff=True,
+            is_superuser=True,
         )
 
-        self.assertRedirects(response, reverse('panaderia:chucheria_list'))
-        self.chucheria.refresh_from_db()
-        self.assertEqual(self.chucheria.stock, 9)
+    def test_upload_backup_imports_brands_products_and_sales(self):
+        with tempfile.NamedTemporaryFile(suffix='.sqlite3', delete=False) as temp_file:
+            backup_path = temp_file.name
+
+        try:
+            conn = sqlite3.connect(backup_path)
+            cur = conn.cursor()
+            cur.execute('CREATE TABLE panaderia_marca (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, tipo TEXT)')
+            cur.execute('CREATE TABLE panaderia_producto (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, existencia_manana INTEGER, entrada_manana INTEGER, entrada_tarde INTEGER, stock INTEGER, categoria TEXT, marca_id INTEGER, sabor BOOLEAN)')
+            cur.execute('CREATE TABLE panaderia_bebida (id INTEGER PRIMARY KEY AUTOINCREMENT, producto_ptr_id INTEGER, volumen_ml INTEGER)')
+            cur.execute('CREATE TABLE panaderia_chucheria (id INTEGER PRIMARY KEY AUTOINCREMENT, producto_ptr_id INTEGER, descripcion TEXT)')
+            cur.execute('CREATE TABLE panaderia_venta (id INTEGER PRIMARY KEY AUTOINCREMENT, fecha TEXT, moneda TEXT, estado TEXT, total TEXT, observacion TEXT, creado_en TEXT)')
+            cur.execute('CREATE TABLE panaderia_ventaitem (id INTEGER PRIMARY KEY AUTOINCREMENT, venta_id INTEGER, producto_id INTEGER, cantidad INTEGER, precio_unitario TEXT, moneda TEXT)')
+            cur.execute('INSERT INTO panaderia_marca (id, nombre, tipo) VALUES (1, "Marca importada", "panaderia")')
+            cur.execute('INSERT INTO panaderia_producto (id, nombre, existencia_manana, entrada_manana, entrada_tarde, stock, categoria, marca_id, sabor) VALUES (10, "Pan importado", 4, 1, 1, 6, "pan_salado", 1, 0)')
+            cur.execute('INSERT INTO panaderia_venta (id, fecha, moneda, estado, total, observacion, creado_en) VALUES (100, "2026-07-07", "COP", "cerrada", "15000.00", "Venta importada", "2026-07-07 10:00:00")')
+            cur.execute('INSERT INTO panaderia_ventaitem (id, venta_id, producto_id, cantidad, precio_unitario, moneda) VALUES (200, 100, 10, 2, "7500.00", "COP")')
+            conn.commit()
+            conn.close()
+
+            with open(backup_path, 'rb') as fh:
+                uploaded = SimpleUploadedFile('backup.sqlite3', fh.read(), content_type='application/octet-stream')
+
+            self.client.force_login(self.user)
+            response = self.client.post(reverse('panaderia:upload_backup'), {'backup_file': uploaded, 'import': '1'}, follow=True)
+
+            self.assertRedirects(response, reverse('panaderia:backups'))
+            self.assertTrue(Marca.objects.filter(nombre='Marca importada', tipo='panaderia').exists())
+            producto = Producto.objects.get(nombre='Pan importado')
+            self.assertEqual(producto.stock, 6)
+            self.assertEqual(producto.existencia_manana, 4)
+            self.assertEqual(Venta.objects.filter(observacion='Venta importada').exists(), True)
+            self.assertTrue(VentaItem.objects.filter(venta__observacion='Venta importada').exists())
+        finally:
+            if os.path.exists(backup_path):
+                os.remove(backup_path)
 
 
 class ReportesTests(TestCase):

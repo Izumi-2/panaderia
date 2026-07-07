@@ -5,9 +5,16 @@
     <ul class="list-group list-group-flush mb-3">
         <li class="list-group-item">Marca: {% if object.marca %}{{ object.marca.nombre }}{% else %}-{% endif %}</li>
         <li class="list-group-item">Categoría: {{ object.get_categoria_display }}</li>
-        <li class="list-group-item">Stock: {{ object.stock }}</li>
+        <li class="list-group-item">Existencia de la mañana: {{ object.existencia_manana }}</li>
+        <li class="list-group-item">Entrada de la mañana: {{ object.entrada_manana }}</li>
+        <li class="list-group-item">Entrada de la tarde: {{ object.entrada_tarde }}</li>
+        <li class="list-group-item">Sobrante de la noche: {{ object.existencia_manana|add:object.entrada_manana|add:object.entrada_tarde }}</li>
+        <li class="list-group-item">Stock disponible para ventas: {{ object.stock }}</li>
         <li class="list-group-item">Sabor: {% if object.sabor %}Sí{% else %}No{% endif %}</li>
     </ul>
+    <div class="alert alert-info">
+        La existencia de la mañana es la que baja con las ventas. Las entradas solo suman al sobrante para que el cierre de jornada lo pase a la existencia del siguiente día.
+    </div>
     <a href="{% url 'panaderia:product_update' object.id %}" class="btn btn-warning">Editar</a>
     <a href="{% url 'panaderia:product_list' %}" class="btn btn-secondary ms-2">Volver</a>
 </div>

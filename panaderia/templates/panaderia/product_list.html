@@ -25,6 +25,9 @@
     </div>
     <div class="col-md-9">
         <div class="card p-3">
+            <div class="alert alert-info mb-3">
+                La existencia de la mañana es la que disminuye con las ventas. Las entradas de mañana y tarde solo se suman al sobrante de la noche y, al cerrar la jornada, ese sobrante pasa directamente a la existencia de la mañana del siguiente día.
+            </div>
             <div class="table-responsive">
                 <form method="post" action="{% url 'panaderia:close_day_products' %}" id="cierre-jornada-form">
                     {% csrf_token %}
@@ -38,7 +41,7 @@
                                 <th>Entrada mañana</th>
                                 <th>Entrada tarde</th>
                                 <th>Total ingresados</th>
-                                <th>Sobrante noche</th>
+                                <th>Sobrante de la noche</th>
                                 <th>Acciones</th>
                         </tr>
                     </thead>
@@ -49,13 +52,13 @@
                         <td>{{ producto.marca.nombre|default:"N/A" }}</td>
                         <td>{{ producto.get_categoria_display }}</td>
                         <td>
-                            <input type="number" min="0" class="form-control existencia-manana" data-id="{{ producto.pk }}" value="{{ producto.existencia_manana }}" readonly>
+                            <input type="number" min="0" class="form-control existencia-manana" data-id="{{ producto.pk }}" value="{{ producto.existencia_manana }}">
                         </td>
                         <td>
-                            <input type="number" min="0" class="form-control entrada-manana" data-id="{{ producto.pk }}" value="{{ producto.entrada_manana }}" readonly>
+                            <input type="number" min="0" class="form-control entrada-manana" data-id="{{ producto.pk }}" value="{{ producto.entrada_manana }}">
                         </td>
                         <td>
-                            <input type="number" min="0" class="form-control entrada-tarde" data-id="{{ producto.pk }}" value="{{ producto.entrada_tarde }}" readonly>
+                            <input type="number" min="0" class="form-control entrada-tarde" data-id="{{ producto.pk }}" value="{{ producto.entrada_tarde }}">
                         </td>
                         <td>
                             <span class="total-ingresados">0</span>
@@ -113,8 +116,27 @@
                     document.getElementById('total-ingresados-general').textContent = totalIngGen;
                     document.getElementById('total-sobrante-general').textContent = totalSobrGen;
                 }
+                function persistRow(row){
+                    var id = row.getAttribute('data-id');
+                    var formData = new FormData();
+                    formData.append('model_type', 'producto');
+                    formData.append('pk', id);
+                    formData.append('existencia_manana', row.querySelector('.existencia-manana').value);
+                    formData.append('entrada_manana', row.querySelector('.entrada-manana').value);
+                    formData.append('entrada_tarde', row.querySelector('.entrada-tarde').value);
+                    fetch('{% url "panaderia:update_inventory" %}', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {'X-CSRFToken': '{{ csrf_token }}'}
+                    }).then(function(response){ return response.json(); }).then(function(data){
+                        if (data.ok) {
+                            row.querySelector('.sobrante-noche').textContent = data.existencia_manana + data.entrada_manana + data.entrada_tarde;
+                        }
+                    });
+                }
                 document.querySelectorAll('.existencia-manana, .entrada-manana, .entrada-tarde').forEach(function(input){
                     input.addEventListener('input', function(e){ var row = e.target.closest('.producto-row'); if(!row) return; updateRow(row); updateTotals(); });
+                    input.addEventListener('change', function(e){ var row = e.target.closest('.producto-row'); if(!row) return; persistRow(row); });
                 });
                 document.querySelectorAll('.producto-row').forEach(function(row){ updateRow(row); });
                 updateTotals();

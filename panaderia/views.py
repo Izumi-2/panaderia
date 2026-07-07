@@ -1,9 +1,11 @@
 import io
 import os
 import re
+import sqlite3
 from datetime import datetime
+from decimal import Decimal
 from django.conf import settings
-from django.http import HttpResponse, FileResponse
+from django.http import HttpResponse, FileResponse, JsonResponse
 from django.urls import reverse_lazy, reverse
 from django.views import generic
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
@@ -12,6 +14,7 @@ from django.core.exceptions import PermissionDenied
 from functools import wraps
 from django.shortcuts import render
 from django.utils import timezone
+from django.utils.dateparse import parse_date, parse_datetime
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
@@ -99,6 +102,54 @@ class AdminLoginView(auth_views.LoginView):
         return super().form_valid(form)
 
 
+@admin_required
+def update_inventory(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    model_type = (request.POST.get('model_type') or '').strip().lower()
+    pk = request.POST.get('pk')
+    if not model_type or not pk:
+        return JsonResponse({'ok': False, 'error': 'Datos incompletos'}, status=400)
+
+    model_map = {
+        'producto': Producto,
+        'bebida': Bebida,
+        'chucheria': Chucheria,
+    }
+    model_class = model_map.get(model_type)
+    if model_class is None:
+        return JsonResponse({'ok': False, 'error': 'Tipo de modelo no soportado'}, status=400)
+
+    instance = get_object_or_404(model_class, pk=pk)
+    try:
+        existencia = int(request.POST.get('existencia_manana', instance.existencia_manana))
+    except (TypeError, ValueError):
+        existencia = instance.existencia_manana
+    try:
+        entrada_manana = int(request.POST.get('entrada_manana', instance.entrada_manana))
+    except (TypeError, ValueError):
+        entrada_manana = instance.entrada_manana
+    try:
+        entrada_tarde = int(request.POST.get('entrada_tarde', instance.entrada_tarde))
+    except (TypeError, ValueError):
+        entrada_tarde = instance.entrada_tarde
+
+    if existencia < 0:
+        existencia = 0
+    if entrada_manana < 0:
+        entrada_manana = 0
+    if entrada_tarde < 0:
+        entrada_tarde = 0
+
+    instance.existencia_manana = existencia
+    instance.entrada_manana = entrada_manana
+    instance.entrada_tarde = entrada_tarde
+    instance.stock = max(0, existencia + entrada_manana + entrada_tarde)
+    instance.save(update_fields=['existencia_manana', 'entrada_manana', 'entrada_tarde', 'stock'])
+    return JsonResponse({'ok': True, 'stock': instance.stock, 'existencia_manana': instance.existencia_manana, 'entrada_manana': instance.entrada_manana, 'entrada_tarde': instance.entrada_tarde})
+
+
 class ProductListView(AdminRequiredMixin, generic.ListView):
     model = Producto
     template_name = 'panaderia/product_list.html'
@@ -152,7 +203,10 @@ class ProductUpdateView(AdminRequiredMixin, generic.UpdateView):
 
     def form_valid(self, form):
         request = self.request
-        existencia = form.instance.existencia_manana
+        try:
+            existencia = int(request.POST.get('existencia_manana', form.instance.existencia_manana))
+        except (TypeError, ValueError):
+            existencia = form.instance.existencia_manana
         try:
             entrada_manana = int(request.POST.get('entrada_manana', form.instance.entrada_manana))
         except (TypeError, ValueError):
@@ -161,6 +215,7 @@ class ProductUpdateView(AdminRequiredMixin, generic.UpdateView):
             entrada_tarde = int(request.POST.get('entrada_tarde', form.instance.entrada_tarde))
         except (TypeError, ValueError):
             entrada_tarde = form.instance.entrada_tarde
+        form.instance.existencia_manana = existencia
         form.instance.entrada_manana = entrada_manana
         form.instance.entrada_tarde = entrada_tarde
         form.instance.stock = max(0, existencia + entrada_manana + entrada_tarde)
@@ -187,6 +242,10 @@ class BebidaCreateView(AdminRequiredMixin, generic.CreateView):
 
     def form_valid(self, form):
         form.instance.categoria = 'bebida'
+        form.instance.existencia_manana = int(self.request.POST.get('existencia_manana', 0) or 0)
+        form.instance.entrada_manana = int(self.request.POST.get('entrada_manana', 0) or 0)
+        form.instance.entrada_tarde = int(self.request.POST.get('entrada_tarde', 0) or 0)
+        form.instance.stock = max(0, form.instance.existencia_manana + form.instance.entrada_manana + form.instance.entrada_tarde)
         return super().form_valid(form)
 
 
@@ -195,6 +254,13 @@ class BebidaUpdateView(AdminRequiredMixin, generic.UpdateView):
     form_class = BebidaForm
     template_name = 'panaderia/bebida_form.html'
     success_url = reverse_lazy('panaderia:nevera_list')
+
+    def form_valid(self, form):
+        form.instance.existencia_manana = int(self.request.POST.get('existencia_manana', form.instance.existencia_manana) or form.instance.existencia_manana)
+        form.instance.entrada_manana = int(self.request.POST.get('entrada_manana', form.instance.entrada_manana) or form.instance.entrada_manana)
+        form.instance.entrada_tarde = int(self.request.POST.get('entrada_tarde', form.instance.entrada_tarde) or form.instance.entrada_tarde)
+        form.instance.stock = max(0, form.instance.existencia_manana + form.instance.entrada_manana + form.instance.entrada_tarde)
+        return super().form_valid(form)
 
 
 class BebidaDeleteView(AdminRequiredMixin, generic.DeleteView):
@@ -219,8 +285,11 @@ def apply_surplus_product(request, pk):
             sobrante = 0
         if sobrante < 0:
             sobrante = 0
+        producto.existencia_manana = sobrante
+        producto.entrada_manana = 0
+        producto.entrada_tarde = 0
         producto.stock = sobrante
-        producto.save(update_fields=['stock'])
+        producto.save(update_fields=['existencia_manana', 'entrada_manana', 'entrada_tarde', 'stock'])
         messages.success(request, f'Sobrante de la noche aplicado a {producto.nombre}.')
     return redirect('panaderia:product_list')
 
@@ -243,10 +312,10 @@ def close_day_products(request):
             sobrante = 0
         producto = Producto.objects.filter(pk=producto_pk).first()
         if producto:
-            producto.stock = sobrante
             producto.existencia_manana = sobrante
             producto.entrada_manana = 0
             producto.entrada_tarde = 0
+            producto.stock = sobrante
             producto.save(update_fields=['stock', 'existencia_manana', 'entrada_manana', 'entrada_tarde'])
             updated += 1
 
@@ -275,8 +344,11 @@ def apply_surplus_nevera(request, pk):
             sobrante = 0
         if sobrante < 0:
             sobrante = 0
+        bebida.existencia_manana = sobrante
+        bebida.entrada_manana = 0
+        bebida.entrada_tarde = 0
         bebida.stock = sobrante
-        bebida.save(update_fields=['stock'])
+        bebida.save(update_fields=['existencia_manana', 'entrada_manana', 'entrada_tarde', 'stock'])
         messages.success(request, f'Sobrante de la noche aplicado a {bebida.nombre}.')
     return redirect('panaderia:nevera_list')
 
@@ -297,17 +369,27 @@ def apply_surplus_chucheria(request, pk):
             sobrante = 0
         if sobrante < 0:
             sobrante = 0
+        chucheria.existencia_manana = sobrante
+        chucheria.entrada_manana = 0
+        chucheria.entrada_tarde = 0
         chucheria.stock = sobrante
-        chucheria.save(update_fields=['stock'])
+        chucheria.save(update_fields=['existencia_manana', 'entrada_manana', 'entrada_tarde', 'stock'])
         messages.success(request, f'Sobrante de la noche aplicado a {chucheria.nombre}.')
     return redirect('panaderia:chucheria_list')
 
 
 class ChucheriaUpdateView(AdminRequiredMixin, generic.UpdateView):
     model = Chucheria
-    fields = ['nombre', 'marca', 'descripcion', 'stock']
+    fields = ['nombre', 'marca', 'descripcion']
     template_name = 'panaderia/chucheria_form.html'
     success_url = reverse_lazy('panaderia:chucheria_list')
+
+    def form_valid(self, form):
+        form.instance.existencia_manana = int(self.request.POST.get('existencia_manana', form.instance.existencia_manana) or form.instance.existencia_manana)
+        form.instance.entrada_manana = int(self.request.POST.get('entrada_manana', form.instance.entrada_manana) or form.instance.entrada_manana)
+        form.instance.entrada_tarde = int(self.request.POST.get('entrada_tarde', form.instance.entrada_tarde) or form.instance.entrada_tarde)
+        form.instance.stock = max(0, form.instance.existencia_manana + form.instance.entrada_manana + form.instance.entrada_tarde)
+        return super().form_valid(form)
 
 
 class ChucheriaDeleteView(AdminRequiredMixin, generic.DeleteView):
@@ -345,12 +427,16 @@ class MarcaCreateView(AdminRequiredMixin, generic.CreateView):
 
 class ChucheriaCreateView(AdminRequiredMixin, generic.CreateView):
     model = Chucheria
-    fields = ['nombre', 'marca', 'descripcion', 'stock']
+    fields = ['nombre', 'marca', 'descripcion']
     template_name = 'panaderia/chucheria_form.html'
     success_url = reverse_lazy('panaderia:chucheria_list')
 
     def form_valid(self, form):
         form.instance.categoria = 'chucheria'
+        form.instance.existencia_manana = int(self.request.POST.get('existencia_manana', 0) or 0)
+        form.instance.entrada_manana = int(self.request.POST.get('entrada_manana', 0) or 0)
+        form.instance.entrada_tarde = int(self.request.POST.get('entrada_tarde', 0) or 0)
+        form.instance.stock = max(0, form.instance.existencia_manana + form.instance.entrada_manana + form.instance.entrada_tarde)
         return super().form_valid(form)
 
 
@@ -827,6 +913,10 @@ def backups_list(request):
     # lista de backups
     backups = Backup.objects.order_by('-created_at')
 
+    ventas = Venta.objects.prefetch_related('items__producto').order_by('-fecha', '-creado_en')
+    if target_date:
+        ventas = ventas.filter(fecha=target_date)
+
     # construir snapshot de inventario para la fecha seleccionada (si existe)
     productos = Producto.objects.all()
     productos_snapshot = []
@@ -840,7 +930,19 @@ def backups_list(request):
         for producto in productos:
             productos_snapshot.append({'nombre': producto.nombre, 'stock': producto.stock})
 
-    return render(request, 'panaderia/backups.html', {'backups': backups, 'productos': productos_snapshot, 'selected_date': target_date})
+    ventas_totales = {
+        'count': ventas.count(),
+        'items': sum(venta.items.count() for venta in ventas),
+        'total': sum(float(venta.total) for venta in ventas),
+    }
+
+    return render(request, 'panaderia/backups.html', {
+        'backups': backups,
+        'productos': productos_snapshot,
+        'selected_date': target_date,
+        'ventas': ventas,
+        'ventas_totales': ventas_totales,
+    })
 
 
 @admin_required
@@ -876,6 +978,167 @@ def create_backup(request):
     return redirect('panaderia:backups')
 
 
+def _import_backup_database(dest_path):
+    from django.db import transaction
+
+    def _table_exists(conn, table_name):
+        row = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,)).fetchone()
+        return row is not None
+
+    def _column_names(conn, table_name):
+        return [row[1] for row in conn.execute(f'PRAGMA table_info("{table_name}")').fetchall()]
+
+    def _get_value(row, columns, field_name):
+        if field_name in columns:
+            return row[columns.index(field_name)]
+        return None
+
+    def _to_bool(value):
+        if isinstance(value, bool):
+            return value
+        if value is None:
+            return False
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            text = value.strip().lower()
+            if text in {'1', 'true', 'si', 'sí', 'yes', 'y'}:
+                return True
+            if text in {'0', 'false', 'no', 'n', ''}:
+                return False
+        return bool(value)
+
+    def _to_decimal(value):
+        if value in (None, ''):
+            return Decimal('0')
+        try:
+            return Decimal(str(value))
+        except Exception:
+            return Decimal('0')
+
+    def _to_date(value):
+        if value in (None, ''):
+            return timezone.now().date()
+        if isinstance(value, datetime):
+            return value.date()
+        parsed = parse_date(str(value))
+        return parsed or timezone.now().date()
+
+    def _to_datetime(value):
+        if value in (None, ''):
+            return timezone.now()
+        if isinstance(value, datetime):
+            return value
+        parsed = parse_datetime(str(value))
+        return parsed or timezone.now()
+
+    conn = sqlite3.connect(dest_path)
+    try:
+        with transaction.atomic():
+            VentaItem.objects.all().delete()
+            Venta.objects.all().delete()
+            Bebida.objects.all().delete()
+            Chucheria.objects.all().delete()
+            Producto.objects.all().delete()
+            Marca.objects.all().delete()
+
+            brand_id_map = {}
+            if _table_exists(conn, 'panaderia_marca'):
+                columns = _column_names(conn, 'panaderia_marca')
+                for row in conn.execute(f'SELECT * FROM "panaderia_marca"').fetchall():
+                    source_id = _get_value(row, columns, 'id')
+                    nombre = str(_get_value(row, columns, 'nombre') or '').strip()
+                    if not nombre:
+                        continue
+                    tipo = str(_get_value(row, columns, 'tipo') or 'panaderia').strip() or 'panaderia'
+                    marca = Marca.objects.create(id=source_id, nombre=nombre, tipo=tipo)
+                    if source_id is not None:
+                        brand_id_map[source_id] = marca.pk
+
+            product_id_map = {}
+            if _table_exists(conn, 'panaderia_producto'):
+                columns = _column_names(conn, 'panaderia_producto')
+                for row in conn.execute(f'SELECT * FROM "panaderia_producto"').fetchall():
+                    source_id = _get_value(row, columns, 'id')
+                    nombre = str(_get_value(row, columns, 'nombre') or '').strip()
+                    if not nombre:
+                        continue
+                    marca_id = _get_value(row, columns, 'marca_id')
+                    marca_obj = None
+                    if marca_id is not None:
+                        marca_obj = Marca.objects.filter(pk=brand_id_map.get(marca_id)).first()
+                    producto = Producto.objects.create(
+                        id=source_id,
+                        nombre=nombre,
+                        existencia_manana=int(_get_value(row, columns, 'existencia_manana') or 0),
+                        entrada_manana=int(_get_value(row, columns, 'entrada_manana') or 0),
+                        entrada_tarde=int(_get_value(row, columns, 'entrada_tarde') or 0),
+                        stock=int(_get_value(row, columns, 'stock') or 0),
+                        categoria=str(_get_value(row, columns, 'categoria') or 'pan_salado').strip() or 'pan_salado',
+                        marca=marca_obj,
+                        sabor=_to_bool(_get_value(row, columns, 'sabor')),
+                    )
+                    if source_id is not None:
+                        product_id_map[source_id] = producto.pk
+
+            if _table_exists(conn, 'panaderia_bebida'):
+                columns = _column_names(conn, 'panaderia_bebida')
+                for row in conn.execute('SELECT * FROM "panaderia_bebida"').fetchall():
+                    source_product_id = _get_value(row, columns, 'producto_ptr_id')
+                    dest_product_id = product_id_map.get(source_product_id)
+                    if not dest_product_id:
+                        continue
+                    volumen_ml = _get_value(row, columns, 'volumen_ml')
+                    Bebida.objects.create(producto_ptr_id=dest_product_id, volumen_ml=int(volumen_ml) if volumen_ml is not None else None)
+
+            if _table_exists(conn, 'panaderia_chucheria'):
+                columns = _column_names(conn, 'panaderia_chucheria')
+                for row in conn.execute('SELECT * FROM "panaderia_chucheria"').fetchall():
+                    source_product_id = _get_value(row, columns, 'producto_ptr_id')
+                    dest_product_id = product_id_map.get(source_product_id)
+                    if not dest_product_id:
+                        continue
+                    descripcion = str(_get_value(row, columns, 'descripcion') or '').strip()
+                    Chucheria.objects.create(producto_ptr_id=dest_product_id, descripcion=descripcion)
+
+            venta_id_map = {}
+            if _table_exists(conn, 'panaderia_venta'):
+                columns = _column_names(conn, 'panaderia_venta')
+                for row in conn.execute('SELECT * FROM "panaderia_venta"').fetchall():
+                    source_id = _get_value(row, columns, 'id')
+                    venta = Venta.objects.create(
+                        id=source_id,
+                        fecha=_to_date(_get_value(row, columns, 'fecha')),
+                        moneda=str(_get_value(row, columns, 'moneda') or 'COP').strip() or 'COP',
+                        estado=str(_get_value(row, columns, 'estado') or 'abierta').strip() or 'abierta',
+                        total=_to_decimal(_get_value(row, columns, 'total')),
+                        observacion=str(_get_value(row, columns, 'observacion') or '').strip(),
+                    )
+                    if source_id is not None:
+                        venta_id_map[source_id] = venta.pk
+
+            if _table_exists(conn, 'panaderia_ventaitem'):
+                columns = _column_names(conn, 'panaderia_ventaitem')
+                for row in conn.execute('SELECT * FROM "panaderia_ventaitem"').fetchall():
+                    source_id = _get_value(row, columns, 'id')
+                    source_venta_id = _get_value(row, columns, 'venta_id')
+                    source_product_id = _get_value(row, columns, 'producto_id')
+                    dest_venta_id = venta_id_map.get(source_venta_id)
+                    dest_product_id = product_id_map.get(source_product_id)
+                    if not dest_venta_id or not dest_product_id:
+                        continue
+                    VentaItem.objects.create(
+                        id=source_id,
+                        venta_id=dest_venta_id,
+                        producto_id=dest_product_id,
+                        cantidad=int(_get_value(row, columns, 'cantidad') or 0),
+                        precio_unitario=_to_decimal(_get_value(row, columns, 'precio_unitario')),
+                        moneda=str(_get_value(row, columns, 'moneda') or 'COP').strip() or 'COP',
+                    )
+    finally:
+        conn.close()
+
+
 @admin_required
 def upload_backup(request):
     if request.method == 'POST':
@@ -889,47 +1152,14 @@ def upload_backup(request):
                     out.write(chunk)
             backup = Backup.objects.create(file=f'backups/{f.name}', created_by=request.user)
             messages.success(request, 'Respaldo subido correctamente.')
-            # Si se solicita importar datos desde el respaldo, intentar sincronizar inventario
             try:
                 do_import = request.POST.get('import') == '1' or request.GET.get('import') == '1'
             except Exception:
                 do_import = False
             if do_import:
-                import sqlite3
-                from django.db import transaction
-                updated = 0
-                created_count = 0
                 try:
-                    conn = sqlite3.connect(dest_path)
-                    cur = conn.cursor()
-                    # Intentar leer la tabla Django `panaderia_producto` (nombre, stock, categoria, marca_id, sabor)
-                    cur.execute("SELECT id, nombre, stock, categoria, marca_id FROM panaderia_producto")
-                    rows = cur.fetchall()
-                    conn.close()
-
-                    from .models import Producto, Marca
-                    with transaction.atomic():
-                        for r in rows:
-                            _, nombre, stock_val, categoria, marca_id = r
-                            if nombre is None:
-                                continue
-                            nombre = str(nombre).strip()
-                            try:
-                                prod = Producto.objects.get(nombre=nombre)
-                                prod.stock = int(stock_val) if stock_val is not None else prod.stock
-                                prod.save(update_fields=['stock'])
-                                updated += 1
-                            except Producto.DoesNotExist:
-                                # crear producto mínimo si no existe
-                                marca_obj = None
-                                if marca_id:
-                                    try:
-                                        marca_obj = Marca.objects.get(pk=marca_id)
-                                    except Exception:
-                                        marca_obj = None
-                                prod = Producto.objects.create(nombre=nombre, stock=int(stock_val) if stock_val is not None else 0, categoria=categoria or 'pan_salado', marca=marca_obj)
-                                created_count += 1
-                    messages.success(request, f'Importación desde respaldo: {updated} actualizados, {created_count} creados.')
+                    _import_backup_database(dest_path)
+                    messages.success(request, 'Importación desde respaldo completada: marcas, productos, ventas e ítems restaurados.')
                 except Exception as e:
                     messages.error(request, f'Error al importar datos desde el respaldo: {e}')
     return redirect('panaderia:backups')

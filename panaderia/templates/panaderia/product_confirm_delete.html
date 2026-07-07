@@ -3,6 +3,11 @@
 <div class="card p-4">
     <h2>Eliminar Producto</h2>
     <p>¿Seguro que desea eliminar "{{ object.nombre }}"?</p>
+    <ul class="list-group list-group-flush mb-3">
+        <li class="list-group-item">Existencia de la mañana: {{ object.existencia_manana }}</li>
+        <li class="list-group-item">Stock disponible: {{ object.stock }}</li>
+    </ul>
+    <p class="text-muted">Al eliminar el producto se quitará también su registro de inventario y el flujo asociado a ventas.</p>
     <form method="post">
         {% csrf_token %}
         <button type="submit" class="btn btn-danger">Confirmar</button>

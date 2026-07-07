@@ -59,11 +59,11 @@
                             </div>
                             <div class="col-12 mt-3">
                                 <label class="form-label">Registrar existencia</label>
-                                <div class="form-text mb-2">Ingresa la existencia de la mañana. Si tienes entradas de mañana o tarde, se sumarán para calcular el stock total que se usará en ventas.</div>
+                                <div class="form-text mb-2">La existencia de la mañana es la base que disminuye con las ventas. Las entradas de mañana y tarde solo se suman para formar el sobrante de la noche y, al cerrar la jornada, ese sobrante pasa a la existencia de la mañana del siguiente día.</div>
                                 <div class="row g-2">
                                     <div class="col-4">
                                         <label class="form-label small">Existencia mañana</label>
-                                        <input type="number" min="0" class="form-control existencia-manana" name="existencia_manana" id="id_existencia_manana" value="{% if form.instance.pk %}{{ form.instance.existencia_manana }}{% else %}0{% endif %}" {% if form.instance.pk %}readonly{% endif %}>
+                                        <input type="number" min="0" class="form-control existencia-manana" name="existencia_manana" id="id_existencia_manana" value="{% if form.instance.pk %}{{ form.instance.existencia_manana }}{% else %}0{% endif %}">
                                     </div>
                                     <div class="col-4">
                                         <label class="form-label small">Entrada mañana</label>

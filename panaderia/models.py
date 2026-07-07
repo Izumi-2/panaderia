@@ -69,6 +69,10 @@ class Producto(models.Model):
             return 'badge-medium'
         return 'badge-high'
 
+    def recalculate_stock(self):
+        self.stock = max(0, self.existencia_manana + self.entrada_manana + self.entrada_tarde)
+        return self.stock
+
 
 class Bebida(Producto):
     volumen_ml = models.PositiveIntegerField(null=True, blank=True, verbose_name='Volumen (ml)')
@@ -127,11 +131,14 @@ class VentaItem(models.Model):
         return f"{self.producto.nombre} x {self.cantidad}"
 
     def apply_stock_change(self):
-        if self.producto.stock >= self.cantidad:
-            self.producto.stock -= self.cantidad
-            self.producto.save(update_fields=['stock'])
-            return True
-        return False
+        if self.producto.stock < self.cantidad:
+            return False
+
+        producto = self.producto
+        producto.stock -= self.cantidad
+        producto.existencia_manana = max(0, producto.existencia_manana - self.cantidad)
+        producto.save(update_fields=['stock', 'existencia_manana'])
+        return True
 
     def __init__(self, *args, **kwargs):
         # Compatibilidad: aceptar alias inesperado 'producto_model' si aparece

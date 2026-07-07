@@ -41,11 +41,10 @@ class ProductoForm(forms.ModelForm):
 class BebidaForm(forms.ModelForm):
     class Meta:
         model = Bebida
-        fields = ['nombre', 'marca', 'stock', 'volumen_ml']
+        fields = ['nombre', 'marca', 'volumen_ml']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del producto de nevera'}),
             'marca': forms.Select(attrs={'class': 'form-select'}),
-            'stock': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Cantidad disponible'}),
             'volumen_ml': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Volumen en ml'}),
         }
 
@@ -56,6 +55,10 @@ class BebidaForm(forms.ModelForm):
     def save(self, commit=True):
         bebida = super().save(commit=False)
         bebida.categoria = 'bebida'
+        bebida.existencia_manana = getattr(bebida, 'existencia_manana', 0) or 0
+        bebida.entrada_manana = getattr(bebida, 'entrada_manana', 0) or 0
+        bebida.entrada_tarde = getattr(bebida, 'entrada_tarde', 0) or 0
+        bebida.stock = max(0, bebida.existencia_manana + bebida.entrada_manana + bebida.entrada_tarde)
         if commit:
             bebida.save()
         return bebida
