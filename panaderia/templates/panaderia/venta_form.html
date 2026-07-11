@@ -1,10 +1,11 @@
 {% extends 'base.html' %}
 {% load static %}
+{% block title %}Registrar venta{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'panaderia/css/styles.css' %}">
 {% endblock %}
 {% block content %}
-<div class="d-flex align-items-center justify-content-between mb-4">
+<section class="page-header d-flex align-items-center justify-content-between mb-4">
     <div>
         <h2 class="header-title mb-1">Registrar venta</h2>
         <p class="text-muted mb-0">Completa los datos de venta y visualiza el resumen antes de guardar.</p>
@@ -45,14 +46,14 @@
                 <div class="col-md-4">{{ item_form.precio_unitario.label_tag }} {{ item_form.precio_unitario }}</div>
             </div>
 
-            <div class="product-summary card mt-4 p-3 border-0 shadow-sm">
-                <div class="d-flex align-items-center justify-content-between mb-3">
+            <section class="product-summary card mt-4 p-3 border-0 shadow-sm">
+                <header class="d-flex align-items-center justify-content-between mb-3">
                     <div>
                         <h6 class="mb-1">Resumen del producto</h6>
                         <p class="text-muted mb-0">Detalles clave antes de guardar la venta.</p>
                     </div>
                     <div class="badge bg-primary">Producto seleccionado</div>
-                </div>
+                </header>
                 <div class="row text-center">
                     <div class="col-6 col-md-3 mb-3 mb-md-0">
                         <span class="d-block text-muted">Producto</span>

@@ -1,19 +1,28 @@
 {% extends 'base.html' %}
 {% load static %}
+{% block title %}{% if form.instance.pk %}Editar Producto{% else %}Agregar Producto{% endif %}{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'panaderia/css/product_form.css' %}">
 {% endblock %}
 {% block content %}
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+<section class="card shadow-sm mb-4 product-shell">
+    <div class="card-header product-form-header text-white">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
             <div>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="product-route-badge"><i class="fa-solid fa-box-open me-2"></i>Inventario</span>
+                    <span class="product-route-badge subtle"><i class="fa-solid fa-bread-slice me-2"></i>Panadería</span>
+                </div>
                 <h2 class="mb-1">{% if form.instance.pk %}Editar Producto{% else %}Agregar Producto{% endif %}</h2>
-                <p class="mb-0">Ingresa los datos básicos del producto para el inventario.</p>
+                <p class="mb-0">Registra el producto con una vista clara del inventario y el sobrante de la jornada.</p>
+            </div>
+            <div class="product-hero-metric">
+                <span class="small d-block">Estado</span>
+                <strong>{% if form.instance.pk %}Actualización{% else %}Alta nueva{% endif %}</strong>
             </div>
         </div>
     </div>
-    <div class="card-body">
+    <div class="card-body p-4">
         <nav aria-label="breadcrumb" class="mb-4">
             <ol class="breadcrumb breadcrumb-pan rounded-3">
                 <li class="breadcrumb-item"><a href="{% url 'panaderia:product_list' %}">Productos</a></li>
@@ -26,9 +35,12 @@
                 <div class="alert alert-danger">{{ form.non_field_errors }}</div>
             {% endif %}
             <div class="row g-4">
-                <div class="col-lg-8">
-                    <div class="section-card p-4">
-                        <h5 class="section-title">Información del producto</h5>
+                <div class="col-lg-7">
+                    <div class="section-card p-4 h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="section-title mb-0">Información del producto</h5>
+                            <span class="section-pill"><i class="fa-solid fa-tag me-2"></i>Datos básicos</span>
+                        </div>
                         <div class="row g-3">
                             <div class="col-12">
                                 <label for="id_nombre" class="form-label">Nombre</label>
@@ -49,38 +61,50 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-4">
-                    <div class="section-card p-4">
-                        <h5 class="section-title">Detalle de inventario</h5>
+                <div class="col-lg-5">
+                    <div class="section-card p-4 h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="section-title mb-0">Inventario</h5>
+                            <span class="section-pill accent"><i class="fa-solid fa-chart-line me-2"></i>Vista rápida</span>
+                        </div>
+                        <div class="inventory-summary-card mb-3">
+                            <div class="inventory-summary-card__header">Resumen del día</div>
+                            <div class="inventory-summary-grid">
+                                <div>
+                                    <span>Ingresos del día</span>
+                                    <strong class="total-ingresados">0</strong>
+                                </div>
+                                <div>
+                                    <span>Sobrante de noche</span>
+                                    <strong class="sobrante-noche">0</strong>
+                                </div>
+                            </div>
+                        </div>
                         <div class="row g-3">
                             <div class="col-12 d-none">
                                 {{ form.stock }}
                                 {{ form.stock.errors }}
                             </div>
-                            <div class="col-12 mt-3">
+                            <div class="col-12">
                                 <label class="form-label">Registrar existencia</label>
-                                <div class="form-text mb-2">La existencia de la mañana es la base que disminuye con las ventas. Las entradas de mañana y tarde solo se suman para formar el sobrante de la noche y, al cerrar la jornada, ese sobrante pasa a la existencia de la mañana del siguiente día.</div>
+                                <div class="form-text mb-2">La existencia de la mañana se reduce con las ventas; las entradas de mañana y tarde solo suman al sobrante de la noche para cerrarlo al final del día.</div>
                                 <div class="row g-2">
                                     <div class="col-4">
                                         <label class="form-label small">Existencia mañana</label>
-                                        <input type="number" min="0" class="form-control existencia-manana" name="existencia_manana" id="id_existencia_manana" value="{% if form.instance.pk %}{{ form.instance.existencia_manana }}{% else %}0{% endif %}">
+                                        <input type="number" min="0" class="form-control inventory-existencia" name="existencia_manana" id="id_existencia_manana" value="{% if form.instance.pk %}{{ form.instance.existencia_manana }}{% else %}0{% endif %}">
                                     </div>
                                     <div class="col-4">
                                         <label class="form-label small">Entrada mañana</label>
-                                        <input type="number" min="0" class="form-control entrada-manana" name="entrada_manana" id="id_entrada_manana" value="{% if form.instance.pk %}{{ form.instance.entrada_manana }}{% else %}0{% endif %}">
+                                        <input type="number" min="0" class="form-control inventory-entrada-manana" name="entrada_manana" id="id_entrada_manana" value="{% if form.instance.pk %}{{ form.instance.entrada_manana }}{% else %}0{% endif %}">
                                     </div>
                                     <div class="col-4">
                                         <label class="form-label small">Entrada tarde</label>
-                                        <input type="number" min="0" class="form-control entrada-tarde" name="entrada_tarde" id="id_entrada_tarde" value="{% if form.instance.pk %}{{ form.instance.entrada_tarde }}{% else %}0{% endif %}">
+                                        <input type="number" min="0" class="form-control inventory-entrada-tarde" name="entrada_tarde" id="id_entrada_tarde" value="{% if form.instance.pk %}{{ form.instance.entrada_tarde }}{% else %}0{% endif %}">
                                     </div>
                                 </div>
-                                <div class="mt-2 small">
-                                    Total ingresados: <strong class="total-ingresados">0</strong>
-                                    &nbsp;|&nbsp; Sobrante noche: <strong class="sobrante-noche">0</strong>
-                                </div>
                                 {% if form.instance.pk %}
-                                <div class="mt-1 small text-muted">
-                                    Esta es la existencia de la mañana actual. Para actualizar el stock, ingresa sólo entrada mañana y/o entrada tarde.
+                                <div class="mt-2 small text-muted">
+                                    Esta es la existencia actual. Para actualizarla, modifica solo las entradas del día o la existencia base.
                                 </div>
                                 {% endif %}
                             </div>
@@ -88,20 +112,23 @@
                     </div>
                 </div>
             </div>
-            <div class="mt-4 d-flex justify-content-end gap-2">
-                <a href="{% url 'panaderia:product_list' %}" class="btn btn-outline-secondary">Cancelar</a>
-                <button type="submit" class="btn btn-primary">Guardar producto</button>
+            <div class="mt-4 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                <div class="form-text mb-0">El sistema calcula automáticamente el stock final al guardar.</div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'panaderia:product_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Guardar producto</button>
+                </div>
             </div>
         </form>
     </div>
-</div>
+</section>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     function toInt(v){ var n = parseInt(v,10); return isNaN(n)?0:n; }
     function update(){
-        var existencia = toInt(document.querySelector('.existencia-manana').value);
-        var e1 = toInt(document.querySelector('.entrada-manana').value);
-        var e2 = toInt(document.querySelector('.entrada-tarde').value);
+        var existencia = toInt(document.querySelector('.inventory-existencia').value);
+        var e1 = toInt(document.querySelector('.inventory-entrada-manana').value);
+        var e2 = toInt(document.querySelector('.inventory-entrada-tarde').value);
         var total = e1 + e2;
         var sobr = existencia + total;
         document.querySelector('.total-ingresados').textContent = total;
@@ -111,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function(){
             stockField.value = sobr;
         }
     }
-    document.querySelectorAll('.existencia-manana, .entrada-manana, .entrada-tarde').forEach(function(i){ i.addEventListener('input', update); });
+    document.querySelectorAll('.inventory-existencia, .inventory-entrada-manana, .inventory-entrada-tarde').forEach(function(i){ i.addEventListener('input', update); });
     update();
 });
 </script>

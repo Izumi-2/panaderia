@@ -535,7 +535,7 @@ class VentaListView(AdminRequiredMixin, generic.ListView):
         context['total_sales'] = sum(venta.total for venta in ventas)
         context['total_items'] = sum(venta.items.count() for venta in ventas)
         context['currency_totals'] = totals
-        context['fecha_inicio'] = self.request.GET.get('fecha_inicio', '')
+        context['fecha_inicio'] = self.request.GET.get('fecha_inicio', timezone.localdate())
         context['fecha_fin'] = self.request.GET.get('fecha_fin', '')
         context['moneda'] = self.request.GET.get('moneda', '')
         context['today'] = timezone.localdate()
@@ -548,9 +548,15 @@ class VentaCreateView(AdminRequiredMixin, generic.CreateView):
     template_name = 'panaderia/venta_form.html'
     success_url = reverse_lazy('panaderia:venta_list')
 
+    def get_initial(self):
+        initial = super().get_initial()
+        initial['fecha'] = timezone.localdate().strftime('%Y-%m-%d')
+        return initial
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.setdefault('item_form', VentaItemForm())
+        context['today'] = timezone.localdate()
         return context
 
     def form_valid(self, form):
@@ -643,10 +649,16 @@ class VentaReportView(AdminRequiredMixin, generic.TemplateView):
         for venta in ventas:
             totals[venta.moneda] += float(venta.total)
         context['currency_totals'] = totals
+        context['ventas_count'] = ventas.count()
+        context['total_items'] = sum(venta.items.count() for venta in ventas)
         context['employee_insumos_total'] = sum(float(item.costo) for item in employee_insumos)
         context['gastos_total'] = sum(float(item.monto) for item in gastos)
+        context['employee_insumos_count'] = employee_insumos.count()
+        context['gastos_count'] = gastos.count()
         context['pending_employee_count'] = employee_insumos.filter(pagado=False).count()
         context['pending_expense_count'] = gastos.filter(pagado=False).count()
+        context['pending_employee_rate'] = int(round(context['pending_employee_count'] * 100.0 / context['employee_insumos_count'])) if context['employee_insumos_count'] else 0
+        context['pending_expense_rate'] = int(round(context['pending_expense_count'] * 100.0 / context['gastos_count'])) if context['gastos_count'] else 0
         return context
 
 

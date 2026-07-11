@@ -8,49 +8,51 @@
 {% block content %}
     <div class="login-page-wrapper">
         <div class="container login-hero">
-        <div class="login-card">
-            <div class="login-visual">
-                <div class="login-logo">
-                    <img src="{% static 'panaderia/img/logo.png' %}" alt="Grupo Panadería Los Angeles Santa Elena" />
+            <div class="login-card">
+                <div class="login-visual">
+                    <div class="login-logo">
+                        <img src="{% static 'panaderia/img/logo.png' %}" alt="Grupo Panadería Los Angeles Santa Elena" />
+                    </div>
+                    <div class="brand">Grupo Panadería Los Angeles Santa Elena</div>
+                    <h3>Bienvenido</h3>
+                    <p>Accede al sistema con tu cuenta de administrador y gestiona ventas, inventario y reportes desde un solo lugar.</p>
+                    <div class="login-small">Acceso restringido únicamente para personal autorizado.</div>
                 </div>
-                <div class="brand">Grupo Panadería Los Angeles Santa Elena</div>
-                <h3 style="margin-top:12px">Bienvenido</h3>
-                <p>Accede al sistema con tu cuenta de administrador. Acceso restringido al personal autorizado.</p>
-                <div style="margin-top:18px" class="login-small">Usa tus credenciales para entrar al panel seguro.</div>
-            </div>
 
-            <div class="login-form-card">
-                <h4>Iniciar sesión</h4>
-                <form method="post" novalidate>
-                    {% csrf_token %}
-                    {% if form.non_field_errors %}
-                        <div class="alert alert-danger">
-                            {% for error in form.non_field_errors %}
-                                <div>{{ error }}</div>
-                            {% endfor %}
+                <div class="login-form-card">
+                    <div class="auth-badge">Panel administrativo</div>
+                    <h4>Iniciar sesión</h4>
+                    <p class="auth-description">Ingresa tus credenciales para continuar con la operación diaria.</p>
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="mb-3">
+                            <label class="form-label">Usuario</label>
+                            {{ form.username }}
+                            {% if form.username.errors %}
+                                <div class="text-danger small">{{ form.username.errors|striptags }}</div>
+                            {% endif %}
                         </div>
-                    {% endif %}
-                    <div class="mb-3">
-                        <label class="form-label">Usuario</label>
-                        {{ form.username }}
-                        {% if form.username.errors %}
-                            <div class="text-danger small">{{ form.username.errors|striptags }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Contraseña</label>
-                        {{ form.password }}
-                        {% if form.password.errors %}
-                            <div class="text-danger small">{{ form.password.errors|striptags }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="d-grid mb-2">
-                        <button class="btn btn-login" type="submit">Entrar</button>
-                    </div>
-                    <p class="text-muted small mt-3">Solo usuarios administrativos pueden iniciar sesión en este sistema.</p>
-                </form>
+                        <div class="mb-3">
+                            <label class="form-label">Contraseña</label>
+                            {{ form.password }}
+                            {% if form.password.errors %}
+                                <div class="text-danger small">{{ form.password.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="d-grid mb-2">
+                            <button class="btn btn-login" type="submit">Entrar</button>
+                        </div>
+                        <p class="text-muted small mt-3">Solo usuarios administrativos pueden iniciar sesión en este sistema.</p>
+                    </form>
+                </div>
             </div>
-        </div>
         </div>
     </div>
 {% endblock %}

@@ -1,23 +1,48 @@
 .product-form-card {
-    border: 1px solid rgba(93, 64, 55, 0.28);
-    background: linear-gradient(180deg, #fffaf0 0%, #fff6e0 100%);
+    border: 1px solid rgba(180, 124, 58, 0.24);
+    background: linear-gradient(180deg, #fff8f0 0%, #fff1e2 100%);
+    box-shadow: 0 18px 48px rgba(99, 64, 34, 0.08);
+}
+
+.product-shell {
+    overflow: hidden;
+    border: 1px solid rgba(195, 144, 83, 0.22);
 }
 
 .product-form-header {
-    background: linear-gradient(135deg, #6d4c41 0%, #a1887f 100%);
+    background: linear-gradient(135deg, #7a4d34 0%, #b18a74 100%);
+    padding: 1.25rem 1.4rem;
 }
 
 .product-route-badge {
-    font-size: 0.95rem;
-    background-color: rgba(255, 243, 224, 0.95);
-    color: #5d4037;
-    border: 1px solid rgba(255, 234, 167, 0.6);
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.9rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    background-color: rgba(255, 240, 217, 0.96);
+    color: #5b3c27;
+    border: 1px solid rgba(255, 216, 143, 0.6);
+}
+
+.product-route-badge.subtle {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fffdf7;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.product-hero-metric {
+    padding: 0.75rem 1rem;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.18);
+    min-width: 140px;
+    text-align: center;
 }
 
 .breadcrumb-pan {
     background-color: rgba(255, 245, 230, 0.96);
-    border: 1px solid #ffecb3;
-    padding: 0.6rem 0.9rem;
+    border: 1px solid rgba(255, 214, 144, 0.6);
+    padding: 0.8rem 1rem;
 }
 
 .breadcrumb-pan .breadcrumb-item + .breadcrumb-item::before {
@@ -25,69 +50,97 @@
 }
 
 .section-card {
-    background-color: #fff7ed;
-    border: 1px solid #ffecb3;
-    border-radius: 14px;
+    background: linear-gradient(180deg, #fffaf2 0%, #fff3e2 100%);
+    border: 1px solid rgba(255, 221, 165, 0.75);
+    border-radius: 20px;
+    box-shadow: 0 16px 30px rgba(111, 71, 45, 0.06);
 }
 
 .section-title {
     color: #4e342e;
     font-weight: 700;
-    margin-bottom: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.section-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(255, 209, 92, 0.18);
+    color: #6d4c41;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.section-pill.accent {
+    background: rgba(118, 176, 65, 0.16);
+    color: #426431;
 }
 
 .form-label {
-    font-weight: 600;
-    color: #4e342e;
-}
-
-.quantity-unit-wrapper {
-    display: grid;
-    grid-template-columns: 1.8fr 1fr;
-    gap: 1rem;
-    align-items: end;
-}
-
-.quantity-unit-wrapper .form-control,
-.quantity-unit-wrapper .form-select {
-    min-width: 0;
-}
-
-.quantity-unit-preview {
-    margin-top: 0.75rem;
-    padding: 0.85rem 1rem;
-    background: rgba(255, 243, 224, 0.95);
-    border: 1px solid rgba(255, 224, 171, 0.9);
-    border-radius: 16px;
+    font-weight: 700;
     color: #5d4037;
-    font-size: 0.95rem;
-}
-
-.quantity-unit-help {
-    margin-top: 0.5rem;
-    display: block;
-    color: #6e4e3f;
 }
 
 .form-text {
     color: #6e4e3f;
 }
 
+.inventory-summary-card {
+    padding: 1rem;
+    border-radius: 18px;
+    background: rgba(255, 248, 235, 0.95);
+    border: 1px solid rgba(255, 214, 143, 0.8);
+}
+
+.inventory-summary-card__header {
+    font-weight: 700;
+    color: #6f4b34;
+    margin-bottom: 0.75rem;
+}
+
+.inventory-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.inventory-summary-grid > div {
+    padding: 0.75rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.76);
+    border: 1px solid rgba(195, 144, 83, 0.16);
+}
+
+.inventory-summary-grid span {
+    display: block;
+    color: #7b5c43;
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+}
+
+.inventory-summary-grid strong {
+    color: #3d2718;
+    font-size: 1.1rem;
+}
+
 .form-control:focus,
 .form-select:focus {
-    border-color: #5d4037;
-    box-shadow: 0 0 0 0.15rem rgba(93, 64, 55, 0.14);
+    border-color: #c48b4a;
+    box-shadow: 0 0 0 0.15rem rgba(196, 139, 74, 0.18);
 }
 
 .btn-primary {
     min-width: 160px;
-    background-color: #8d6e63;
-    border-color: #8d6e63;
+    background-color: #ffd15c;
+    border-color: #ffd15c;
+    color: #3c220f;
 }
 
 .btn-primary:hover {
-    background-color: #6d4c41;
-    border-color: #5d4037;
+    background-color: #f2bd40;
+    border-color: #f2bd40;
 }
 
 .badge-low {
@@ -109,4 +162,14 @@
     background-color: #f8d7da;
     color: #842029;
     border: 1px solid #f5c2c7;
+}
+
+@media (max-width: 575px) {
+    .inventory-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .product-hero-metric {
+        width: 100%;
+    }
 }

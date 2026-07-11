@@ -1,24 +1,26 @@
-<aside id="sidebar" class="sidebar bg-white shadow-sm">
-    <div class="sidebar-header p-4 d-flex align-items-center justify-content-between border-bottom">
+<aside id="sidebar" class="sidebar">
+    <div class="sidebar-header d-flex align-items-center justify-content-between">
         <div>
-            <h5 class="mb-0">Menú</h5>
-            <small class="text-muted">Panadería</small>
+            <h5 class="mb-1">Menú</h5>
+            <small class="text-muted">Panel de operaciones</small>
         </div>
         <button class="sidebar-close" type="button" onclick="closeSidebar()" aria-label="Cerrar menú">
             <i class="fas fa-times"></i>
         </button>
     </div>
-    <nav class="nav flex-column p-3 gap-2">
-        <a class="nav-link" href="{% url 'panaderia:recurso_list' %}">Inventario</a>
-        <a class="nav-link" href="{% url 'panaderia:product_list' %}">Productos</a>
-        <a class="nav-link" href="{% url 'panaderia:marca_list' %}">Marcas</a>
-        <a class="nav-link" href="{% url 'panaderia:venta_list' %}">Ventas</a>
-        <a class="nav-link" href="{% url 'panaderia:insumos_gastos' %}">Insumos y gastos</a>
-        <a class="nav-link" href="{% url 'panaderia:reportes' %}">Reportes</a>
-        <div class="dropdown-divider my-2"></div>
-        <form action="{% url 'logout' %}" method="post" class="px-3">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-outline-danger w-100 rounded-pill">Cerrar sesión</button>
-        </form>
+    <nav class="sidebar-nav">
+        <a class="sidebar-link" href="{% url 'panaderia:recurso_list' %}"><i class="fas fa-boxes"></i>Inventario</a>
+        <a class="sidebar-link" href="{% url 'panaderia:product_list' %}"><i class="fas fa-bread-slice"></i>Productos</a>
+        <a class="sidebar-link" href="{% url 'panaderia:marca_list' %}"><i class="fas fa-tag"></i>Marcas</a>
+        <a class="sidebar-link" href="{% url 'panaderia:venta_list' %}"><i class="fas fa-cash-register"></i>Ventas</a>
+        <a class="sidebar-link" href="{% url 'panaderia:insumos_gastos' %}"><i class="fas fa-file-invoice-dollar"></i>Insumos y gastos</a>
+        <a class="sidebar-link" href="{% url 'panaderia:reportes' %}"><i class="fas fa-chart-line"></i>Reportes</a>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-footer">
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning w-100 rounded-pill">Cerrar sesión</button>
+            </form>
+        </div>
     </nav>
 </aside>

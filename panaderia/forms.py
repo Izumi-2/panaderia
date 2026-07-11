@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import SetPasswordForm
+from django.utils import timezone
 
 from .models import Bebida, EmployeeInsumo, Gasto, Marca, Panaderia_items, Producto, Venta, VentaItem
 
@@ -27,15 +28,17 @@ class ProductoForm(forms.ModelForm):
         model = Producto
         fields = ['nombre', 'marca', 'categoria', 'stock']
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del producto'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del producto', 'autocomplete': 'off'}),
             'marca': forms.Select(attrs={'class': 'form-select'}),
             'categoria': forms.Select(attrs={'class': 'form-select'}),
-            'stock': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Cantidad disponible'}),
+            'stock': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Cantidad disponible', 'min': '0'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['marca'].queryset = Marca.objects.all()
+        self.fields['marca'].empty_label = 'Seleccione una marca'
+        self.fields['categoria'].empty_label = 'Seleccione una categoría'
 
 
 class BebidaForm(forms.ModelForm):
@@ -120,13 +123,28 @@ class RecursoForm(forms.ModelForm):
 
 
 class VentaForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.data.get('fecha'):
+            today = timezone.localdate().strftime('%Y-%m-%d')
+            self.initial.setdefault('fecha', today)
+            if 'fecha' in self.fields:
+                self.fields['fecha'].initial = self.initial['fecha']
+                self.fields['fecha'].widget = forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d')
+
     class Meta:
         model = Venta
         fields = ['fecha', 'moneda']
         widgets = {
-            'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'moneda': forms.Select(attrs={'class': 'form-select'}),
+            'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'required': 'required'}, format='%Y-%m-%d'),
+            'moneda': forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
         }
+
+    def clean_fecha(self):
+        fecha = self.cleaned_data.get('fecha')
+        if fecha and fecha > timezone.localdate():
+            raise forms.ValidationError('La fecha no puede ser futura.')
+        return fecha
 
 
 class VentaItemForm(forms.ModelForm):
@@ -134,9 +152,9 @@ class VentaItemForm(forms.ModelForm):
         model = VentaItem
         fields = ['producto', 'cantidad', 'precio_unitario']
         widgets = {
-            'producto': forms.Select(attrs={'class': 'form-select'}),
-            'cantidad': forms.NumberInput(attrs={'class': 'form-control'}),
-            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'producto': forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
+            'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'required': 'required'}),
+            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'required': 'required'}),
         }
 
     def __init__(self, *args, **kwargs):

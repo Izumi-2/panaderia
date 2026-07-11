@@ -1,19 +1,46 @@
 {% extends 'base.html' %}
+{% block title %}Listado de Productos{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <div>
-        <h2 class="header-title">Listado de Productos</h2>
-        <p class="page-intro">Filtra, revisa y administra productos disponibles en el inventario.</p>
+        <h1 class="page-title">Listado de Productos</h1>
+        <p class="page-intro">Filtra, revisa y administra los productos del inventario desde una vista más clara y ordenada.</p>
     </div>
     <div class="page-actions">
         <a href="{% url 'panaderia:product_create' %}" class="btn btn-primary">Agregar Nuevo Producto</a>
     </div>
 </div>
-<div class="row">
-    <div class="col-md-3">
-        <div class="sidebar-filter mb-3">
-            <h5>Filtros de Categoría</h5>
-            <div class="list-group">
+<section class="section-card p-4 mb-4">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="overview-card p-3">
+                <small>Productos disponibles</small>
+                <div class="h4 mb-0">{{ productos|length }}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="overview-card p-3">
+                <small>Categorías</small>
+                <div class="h4 mb-0">{{ categorias|length }}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="overview-card p-3">
+                <small>Inventario</small>
+                <div class="h4 mb-0">Fresco y listo</div>
+            </div>
+        </div>
+    </div>
+</section>
+<div class="row g-4">
+    <aside class="col-lg-3">
+        <section class="sidebar mb-4">
+            <div class="sidebar-header">
+                <h5>Filtrar por categoría</h5>
+                <small>Selecciona una vista rápida del inventario.</small>
+            </div>
+            <div class="list-group list-group-flush">
                 <a href="{% url 'panaderia:product_list' %}" class="list-group-item list-group-item-action {% if not request.GET.categoria %}active{% endif %}">Todos</a>
                 {% for category_value, category_label in categorias %}
                     {% if category_value != 'recurso' %}
@@ -21,75 +48,92 @@
                     {% endif %}
                 {% endfor %}
             </div>
-        </div>
-    </div>
-    <div class="col-md-9">
-        <div class="card p-3">
+        </section>
+    </aside>
+    <main class="col-lg-9">
+        <section class="table-card p-4 mb-4">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-2 mb-3">
+                <div>
+                    <h5 class="section-title mb-1">Control del inventario</h5>
+                    <p class="mb-0 form-text">Ajusta los valores de cada producto y cierra la jornada en un solo paso.</p>
+                </div>
+                <div class="product-toolbar">
+                    <span class="product-pill"><i class="fa-solid fa-clock me-2"></i>Existencia mañana</span>
+                    <span class="product-pill accent"><i class="fa-solid fa-bolt me-2"></i>Entradas del día</span>
+                </div>
+            </div>
             <div class="alert alert-info mb-3">
                 La existencia de la mañana es la que disminuye con las ventas. Las entradas de mañana y tarde solo se suman al sobrante de la noche y, al cerrar la jornada, ese sobrante pasa directamente a la existencia de la mañana del siguiente día.
             </div>
             <div class="table-responsive">
                 <form method="post" action="{% url 'panaderia:close_day_products' %}" id="cierre-jornada-form">
                     {% csrf_token %}
-                    <table class="table table-hover">
+                    <table class="table table-hover align-middle">
                         <thead>
                         <tr>
-                                <th>Nombre</th>
-                                <th>Marca</th>
-                                <th>Categoría</th>
-                                <th>Existencia mañana</th>
-                                <th>Entrada mañana</th>
-                                <th>Entrada tarde</th>
-                                <th>Total ingresados</th>
-                                <th>Sobrante de la noche</th>
-                                <th>Acciones</th>
+                            <th>Producto</th>
+                            <th>Marca</th>
+                            <th>Categoría</th>
+                            <th>Existencia mañana</th>
+                            <th>Entrada mañana</th>
+                            <th>Entrada tarde</th>
+                            <th>Ingresos</th>
+                            <th>Sobrante</th>
+                            <th>Acciones</th>
                         </tr>
-                    </thead>
-                    <tbody>
-                    {% for producto in productos %}
-                    <tr class="producto-row" data-id="{{ producto.pk }}">
-                        <td>{{ producto.nombre }}</td>
-                        <td>{{ producto.marca.nombre|default:"N/A" }}</td>
-                        <td>{{ producto.get_categoria_display }}</td>
-                        <td>
-                            <input type="number" min="0" class="form-control existencia-manana" data-id="{{ producto.pk }}" value="{{ producto.existencia_manana }}">
-                        </td>
-                        <td>
-                            <input type="number" min="0" class="form-control entrada-manana" data-id="{{ producto.pk }}" value="{{ producto.entrada_manana }}">
-                        </td>
-                        <td>
-                            <input type="number" min="0" class="form-control entrada-tarde" data-id="{{ producto.pk }}" value="{{ producto.entrada_tarde }}">
-                        </td>
-                        <td>
-                            <span class="total-ingresados">0</span>
-                        </td>
-                        <td>
-                            <span class="sobrante-noche">0</span>
-                            <input type="hidden" name="sobrante_{{ producto.pk }}" class="surplus-value" value="0">
-                        </td>
-                        <td>
-                            <a href="{% url 'panaderia:product_detail' producto.pk %}" class="btn btn-sm btn-info">Ver</a>
-                            <a href="{% url 'panaderia:product_update' producto.pk %}" class="btn btn-sm btn-warning">Editar</a>
-                            <a href="{% url 'panaderia:product_delete' producto.pk %}" class="btn btn-sm btn-danger">Eliminar</a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="9" class="text-center">No hay productos registrados.</td></tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot>
-                    <tr class="table-active">
-                        <td colspan="6" class="text-end"><strong>Totales:</strong></td>
-                        <td><strong id="total-ingresados-general">0</strong></td>
-                        <td><strong id="total-sobrante-general">0</strong></td>
-                        <td colspan="1"></td>
-                    </tr>
-                </tfoot>
-            </table>
-            <div class="text-end mt-3">
-                <button type="submit" class="btn btn-success">Cerrar jornada</button>
+                        </thead>
+                        <tbody>
+                        {% for producto in productos %}
+                        <tr class="producto-row" data-id="{{ producto.pk }}">
+                            <td>
+                                <div class="product-name-cell">
+                                    <strong>{{ producto.nombre }}</strong>
+                                    <span class="product-meta">{{ producto.marca.nombre|default:"Sin marca" }}</span>
+                                </div>
+                            </td>
+                            <td>{{ producto.marca.nombre|default:"N/A" }}</td>
+                            <td><span class="product-chip">{{ producto.get_categoria_display }}</span></td>
+                            <td>
+                                <input type="number" min="0" class="form-control form-control-sm existencia-manana" data-id="{{ producto.pk }}" value="{{ producto.existencia_manana }}">
+                            </td>
+                            <td>
+                                <input type="number" min="0" class="form-control form-control-sm entrada-manana" data-id="{{ producto.pk }}" value="{{ producto.entrada_manana }}">
+                            </td>
+                            <td>
+                                <input type="number" min="0" class="form-control form-control-sm entrada-tarde" data-id="{{ producto.pk }}" value="{{ producto.entrada_tarde }}">
+                            </td>
+                            <td><span class="product-badge total-ingresados">0</span></td>
+                            <td>
+                                <span class="product-badge success sobrante-noche">0</span>
+                                <input type="hidden" name="sobrante_{{ producto.pk }}" class="surplus-value" value="0">
+                            </td>
+                            <td>
+                                <div class="product-table-actions">
+                                    <a href="{% url 'panaderia:product_detail' producto.pk %}" class="btn btn-sm btn-info">Ver</a>
+                                    <a href="{% url 'panaderia:product_update' producto.pk %}" class="btn btn-sm btn-warning">Editar</a>
+                                    <a href="{% url 'panaderia:product_delete' producto.pk %}" class="btn btn-sm btn-danger">Eliminar</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="9" class="text-center py-4">No hay productos registrados.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                        <tfoot>
+                        <tr class="table-active">
+                            <td colspan="6" class="text-end"><strong>Totales:</strong></td>
+                            <td><strong id="total-ingresados-general">0</strong></td>
+                            <td><strong id="total-sobrante-general">0</strong></td>
+                            <td></td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mt-3">
+                        <div class="form-text mb-0">Los cambios se guardan al salir del campo y el cierre de jornada aplica el sobrante a todos los productos.</div>
+                        <button type="submit" class="btn btn-success">Cerrar jornada</button>
+                    </div>
+                </form>
             </div>
-            </form>
             <script>
             document.addEventListener('DOMContentLoaded', function(){
                 function toInt(v){ var n = parseInt(v,10); return isNaN(n)?0:n; }
@@ -142,10 +186,10 @@
                 updateTotals();
             });
             </script>
-            <div class="text-end">
+            <div class="text-end mt-3">
                 <a href="{% url 'panaderia:product_create' %}" class="btn btn-primary">Agregar Nuevo Producto</a>
             </div>
-        </div>
-    </div>
+        </section>
+    </main>
 </div>
 {% endblock %}

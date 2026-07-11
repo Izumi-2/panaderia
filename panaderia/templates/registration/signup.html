@@ -14,12 +14,14 @@
                     <img src="{% static 'panaderia/img/logo.png' %}" alt="Grupo Panadería Los Angeles Santa Elena" />
                 </div>
                 <div class="brand">Grupo Panadería Los Angeles Santa Elena</div>
-                <h3 style="margin-top:12px">Crear cuenta</h3>
-                <p>Registra un nuevo usuario y accede al panel de administración.</p>
+                <h3>Crear cuenta</h3>
+                <p>Registra un nuevo usuario y accede al panel de administración con una experiencia más clara y organizada.</p>
             </div>
 
             <div class="login-form-card">
-                <h4>Registro</h4>
+                <div class="auth-badge">Registro</div>
+                <h4>Crear usuario</h4>
+                <p class="auth-description">Completa los datos para acceder al sistema de administración.</p>
                 <form method="post" novalidate>
                     {% csrf_token %}
                     {% if form.non_field_errors %}
