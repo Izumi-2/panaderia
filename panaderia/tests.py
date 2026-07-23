@@ -2,12 +2,14 @@ import os
 import sqlite3
 import tempfile
 from decimal import Decimal
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from datetime import timedelta
 from django.utils import timezone
-from .models import Bebida, Chucheria, Marca, Producto, Venta, VentaItem, EmployeeInsumo, Gasto, Panaderia_items
+from .models import Backup, Bebida, Chucheria, Marca, Producto, Venta, VentaItem, EmployeeInsumo, Gasto, Panaderia_items
 
 
 class VentaItemStockTests(TestCase):
@@ -57,6 +59,102 @@ class VentaItemStockTests(TestCase):
         self.producto.refresh_from_db()
         self.assertEqual(self.producto.stock, 8)
         self.assertEqual(self.producto.existencia_manana, 4)
+
+
+class VentaManagementTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='adminventa',
+            password='secret123',
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.marca = Marca.objects.create(nombre='Marca venta', tipo='panaderia')
+        self.producto = Producto.objects.create(
+            nombre='Pan de venta',
+            marca=self.marca,
+            stock=5,
+            existencia_manana=5,
+            categoria='pan_salado',
+        )
+        self.venta = Venta.objects.create(
+            moneda='VES',
+            estado='abierta',
+            fecha=timezone.localdate(),
+            total=Decimal('1200.00'),
+            observacion='Venta inicial',
+        )
+        self.item = VentaItem.objects.create(
+            venta=self.venta,
+            producto=self.producto,
+            cantidad=2,
+            precio_unitario=Decimal('600.00'),
+            moneda='VES',
+        )
+
+    def test_sale_form_rejects_future_dates_and_negative_totals(self):
+        self.client.force_login(self.user)
+        future_date = (timezone.localdate() + timezone.timedelta(days=1)).strftime('%Y-%m-%d')
+        response = self.client.post(
+            reverse('panaderia:venta_create'),
+            {
+                'fecha': future_date,
+                'moneda': 'VES',
+                'metodo_pago': 'efectivo',
+                'producto': self.producto.pk,
+                'cantidad': '-1',
+                'precio_unitario': '-100',
+            },
+            follow=True,
+        )
+
+        self.assertContains(response, 'La fecha no puede ser futura.')
+        self.assertContains(response, 'La cantidad debe ser al menos 1.')
+        self.assertContains(response, 'El precio unitario no puede ser negativo.')
+
+    def test_sale_can_be_updated_and_deleted(self):
+        self.client.force_login(self.user)
+
+        update_response = self.client.post(
+            reverse('panaderia:venta_update', args=[self.venta.pk]),
+            {
+                'fecha': self.venta.fecha.strftime('%Y-%m-%d'),
+                'moneda': 'VES',
+                'metodo_pago': 'pago_movil',
+                'producto': self.producto.pk,
+                'cantidad': '3',
+                'precio_unitario': '650.00',
+            },
+            follow=True,
+        )
+        self.assertRedirects(update_response, reverse('panaderia:venta_list'))
+        self.venta.refresh_from_db()
+        self.assertEqual(self.venta.total, Decimal('1950.00'))
+
+        delete_response = self.client.post(
+            reverse('panaderia:venta_delete', args=[self.venta.pk]),
+            follow=True,
+        )
+        self.assertRedirects(delete_response, reverse('panaderia:venta_list'))
+        self.assertFalse(Venta.objects.filter(pk=self.venta.pk).exists())
+
+    def test_ves_sales_accept_tarjeta_point_of_sale_method(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse('panaderia:venta_create'),
+            {
+                'fecha': self.venta.fecha.strftime('%Y-%m-%d'),
+                'moneda': 'VES',
+                'metodo_pago': 'tarjeta',
+                'producto': self.producto.pk,
+                'cantidad': '1',
+                'precio_unitario': '100.00',
+            },
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse('panaderia:venta_list'))
+        self.assertTrue(Venta.objects.filter(metodo_pago='tarjeta').exists())
 
 
 class InsumoYGastoTests(TestCase):
@@ -256,6 +354,10 @@ class BackupsSalesTests(TestCase):
             precio_unitario=Decimal('3000'),
             moneda='COP',
         )
+        self.backup_today = Backup.objects.create(file='backups/backup-today.sqlite3', created_by=self.user, target_date=timezone.localdate())
+        self.backup_other = Backup.objects.create(file='backups/backup-other.sqlite3', created_by=self.user, target_date=timezone.localdate() - timedelta(days=1))
+        Backup.objects.filter(pk=self.backup_today.pk).update(created_at=timezone.now())
+        Backup.objects.filter(pk=self.backup_other.pk).update(created_at=timezone.now() - timedelta(days=1))
 
     def test_backups_page_includes_sales_history(self):
         self.client.force_login(self.user)
@@ -265,6 +367,14 @@ class BackupsSalesTests(TestCase):
         self.assertIn('ventas', response.context)
         self.assertEqual(response.context['ventas'].count(), 1)
         self.assertEqual(response.context['ventas_totales']['items'], 1)
+
+    def test_backups_page_filters_backup_list_by_selected_date(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('panaderia:backups'), {'date': timezone.localdate().strftime('%Y-%m-%d')})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context['backups'].values_list('id', flat=True)), [self.backup_today.id])
+        self.assertEqual(response.context['selected_date'], timezone.localdate())
 
 
 class BackupImportTests(TestCase):
@@ -312,6 +422,48 @@ class BackupImportTests(TestCase):
         finally:
             if os.path.exists(backup_path):
                 os.remove(backup_path)
+
+    def test_selecting_existing_backup_restores_its_data_into_system(self):
+        restore_file = None
+        with tempfile.NamedTemporaryFile(suffix='.sqlite3', delete=False) as temp_file:
+            backup_path = temp_file.name
+
+        try:
+            conn = sqlite3.connect(backup_path)
+            cur = conn.cursor()
+            cur.execute('CREATE TABLE panaderia_marca (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, tipo TEXT)')
+            cur.execute('CREATE TABLE panaderia_producto (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, existencia_manana INTEGER, entrada_manana INTEGER, entrada_tarde INTEGER, stock INTEGER, categoria TEXT, marca_id INTEGER, sabor BOOLEAN)')
+            cur.execute('CREATE TABLE panaderia_bebida (id INTEGER PRIMARY KEY AUTOINCREMENT, producto_ptr_id INTEGER, volumen_ml INTEGER)')
+            cur.execute('CREATE TABLE panaderia_chucheria (id INTEGER PRIMARY KEY AUTOINCREMENT, producto_ptr_id INTEGER, descripcion TEXT)')
+            cur.execute('CREATE TABLE panaderia_venta (id INTEGER PRIMARY KEY AUTOINCREMENT, fecha TEXT, moneda TEXT, estado TEXT, total TEXT, observacion TEXT, creado_en TEXT)')
+            cur.execute('CREATE TABLE panaderia_ventaitem (id INTEGER PRIMARY KEY AUTOINCREMENT, venta_id INTEGER, producto_id INTEGER, cantidad INTEGER, precio_unitario TEXT, moneda TEXT)')
+            cur.execute('INSERT INTO panaderia_marca (id, nombre, tipo) VALUES (1, "Marca restaurada", "panaderia")')
+            cur.execute('INSERT INTO panaderia_producto (id, nombre, existencia_manana, entrada_manana, entrada_tarde, stock, categoria, marca_id, sabor) VALUES (11, "Pan restaurado", 7, 2, 1, 10, "pan_salado", 1, 0)')
+            cur.execute('INSERT INTO panaderia_venta (id, fecha, moneda, estado, total, observacion, creado_en) VALUES (101, "2026-07-08", "COP", "cerrada", "18000.00", "Venta restaurada", "2026-07-08 10:00:00")')
+            cur.execute('INSERT INTO panaderia_ventaitem (id, venta_id, producto_id, cantidad, precio_unitario, moneda) VALUES (201, 101, 11, 3, "6000.00", "COP")')
+            conn.commit()
+            conn.close()
+
+            dest_dir = os.path.join(settings.MEDIA_ROOT, 'backups')
+            os.makedirs(dest_dir, exist_ok=True)
+            restore_file = os.path.join(dest_dir, 'restore.sqlite3')
+            with open(backup_path, 'rb') as src, open(restore_file, 'wb') as dst:
+                dst.write(src.read())
+
+            backup = Backup.objects.create(file='backups/restore.sqlite3', created_by=self.user)
+            self.client.force_login(self.user)
+            response = self.client.get(reverse('panaderia:restore_backup', args=[backup.pk]), follow=True)
+
+            self.assertRedirects(response, reverse('panaderia:backups'))
+            self.assertTrue(Marca.objects.filter(nombre='Marca restaurada', tipo='panaderia').exists())
+            producto = Producto.objects.get(nombre='Pan restaurado')
+            self.assertEqual(producto.stock, 10)
+            self.assertEqual(Venta.objects.filter(observacion='Venta restaurada').exists(), True)
+        finally:
+            if os.path.exists(backup_path):
+                os.remove(backup_path)
+            if os.path.exists(restore_file):
+                os.remove(restore_file)
 
 
 class ReportesTests(TestCase):

@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import User
 from django.db import models
@@ -100,9 +101,16 @@ class Venta(models.Model):
         ('abierta', 'Abierta'),
         ('cerrada', 'Cerrada'),
     ]
+    METODO_PAGO_CHOICES = [
+        ('efectivo', 'Efectivo'),
+        ('pago_movil', 'Pago móvil'),
+        ('tarjeta', 'Tarjeta / Punto de venta'),
+        ('transferencia', 'Transferencia'),
+    ]
 
     fecha = models.DateField(default=timezone.now, verbose_name='Fecha')
     moneda = models.CharField(max_length=10, choices=MONEDA_CHOICES, default='COP', verbose_name='Moneda')
+    metodo_pago = models.CharField(max_length=20, choices=METODO_PAGO_CHOICES, default='efectivo', verbose_name='Método de pago')
     estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='abierta', verbose_name='Estado')
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name='Total')
     observacion = models.TextField(blank=True, verbose_name='Observación')
@@ -114,6 +122,29 @@ class Venta(models.Model):
 
     def __str__(self):
         return f"Venta {self.id} - {self.get_moneda_display()}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        fecha = self.fecha
+        if isinstance(fecha, datetime):
+            fecha = fecha.date()
+
+        if fecha and fecha > timezone.localdate():
+            raise ValidationError({'fecha': 'La fecha no puede ser futura.'})
+
+        if self.moneda != 'VES' and self.metodo_pago == 'pago_movil':
+            raise ValidationError({'metodo_pago': 'El pago móvil solo está disponible para ventas en bolívares.'})
+
+        if self.moneda != 'VES' and self.metodo_pago == 'tarjeta':
+            raise ValidationError({'metodo_pago': 'La tarjeta / punto de venta solo está disponible para ventas en bolívares.'})
+
+        if self.total is not None and self.total < 0:
+            raise ValidationError({'total': 'El total no puede ser negativo.'})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class VentaItem(models.Model):
@@ -130,15 +161,44 @@ class VentaItem(models.Model):
     def __str__(self):
         return f"{self.producto.nombre} x {self.cantidad}"
 
-    def apply_stock_change(self):
-        if self.producto.stock < self.cantidad:
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        if self.cantidad is None or self.cantidad < 1:
+            raise ValidationError({'cantidad': 'La cantidad debe ser al menos 1.'})
+
+        if self.precio_unitario is None or self.precio_unitario < 0:
+            raise ValidationError({'precio_unitario': 'El precio unitario no puede ser negativo.'})
+
+        if self.producto and self.producto.stock < self.cantidad:
+            raise ValidationError({'producto': f'Stock insuficiente para {self.producto.nombre}. Disponible: {self.producto.stock}.'})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def _adjust_stock(self, quantity_delta):
+        if self.producto is None:
             return False
 
         producto = self.producto
-        producto.stock -= self.cantidad
-        producto.existencia_manana = max(0, producto.existencia_manana - self.cantidad)
+        if quantity_delta < 0:
+            if producto.stock < abs(quantity_delta):
+                return False
+            producto.stock -= abs(quantity_delta)
+            producto.existencia_manana = max(0, producto.existencia_manana - abs(quantity_delta))
+        else:
+            producto.stock += abs(quantity_delta)
+            producto.existencia_manana += abs(quantity_delta)
+
         producto.save(update_fields=['stock', 'existencia_manana'])
         return True
+
+    def apply_stock_change(self):
+        return self._adjust_stock(-self.cantidad)
+
+    def restore_stock_change(self):
+        return self._adjust_stock(self.cantidad)
 
     def __init__(self, *args, **kwargs):
         # Compatibilidad: aceptar alias inesperado 'producto_model' si aparece

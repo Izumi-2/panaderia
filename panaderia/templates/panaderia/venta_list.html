@@ -57,7 +57,7 @@
             <input type="hidden" name="fecha" value="{{ today|date:'Y-m-d' }}">
             <div>
                 <strong>Cerrar jornada</strong>
-                <div class="small text-muted">Cierra las ventas abiertas de {{ today|date:'d/m/Y' }} y prepara una nueva jornada.</div>
+                <div id="current-day-label" class="small text-muted">Cierra las ventas abiertas de {{ today|date:'d/m/Y' }} y prepara una nueva jornada.</div>
             </div>
             <button id="btnCloseDay" type="button" class="btn btn-warning">Cerrar</button>
         </form>
@@ -126,6 +126,8 @@
                     <th>Cantidad</th>
                     <th>Precio unitario</th>
                     <th>Total</th>
+                    <th>Pago</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -148,10 +150,25 @@
                         <td>{{ item.cantidad }}</td>
                         <td>{{ item.precio_unitario|floatformat:2 }}</td>
                         <td>{{ venta.total|floatformat:2 }}</td>
+                        <td>
+                            {% if venta.moneda == 'VES' and venta.metodo_pago == 'pago_movil' %}
+                                <span class="badge bg-info text-dark">Pago móvil</span>
+                            {% elif venta.moneda == 'VES' and venta.metodo_pago == 'tarjeta' %}
+                                <span class="badge bg-primary">Tarjeta / Punto de venta</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ venta.get_metodo_pago_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'panaderia:venta_update' venta.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                                <a href="{% url 'panaderia:venta_delete' venta.pk %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 {% empty %}
-                <tr><td colspan="8" class="text-center">No hay ventas registradas.</td></tr>
+                <tr><td colspan="10" class="text-center">No hay ventas registradas.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -162,15 +179,75 @@
     document.addEventListener('DOMContentLoaded', function () {
         const searchInput = document.getElementById('venta-search');
         const rows = Array.from(document.querySelectorAll('.venta-table tbody tr'));
-        if (!searchInput) return;
+        const closeDayButton = document.getElementById('btnCloseDay');
+        const confirmReportsCheck = document.getElementById('confirmReportsCheck');
+        const confirmCloseBtn = document.getElementById('confirmCloseBtn');
+        const closeDayForm = document.getElementById('closeDayForm');
+        const closeDayModal = document.getElementById('confirmCloseModal');
+        const currentDayLabel = document.getElementById('current-day-label');
+        const hiddenDateField = closeDayForm ? closeDayForm.querySelector('input[name="fecha"]') : null;
 
-        searchInput.addEventListener('input', function () {
-            const query = this.value.toLowerCase();
-            rows.forEach(row => {
-                const text = row.innerText.toLowerCase();
-                row.style.display = query && !text.includes(query) ? 'none' : '';
+        function formatDateParts(date) {
+            const parts = new Intl.DateTimeFormat('es-VE', {
+                timeZone: 'America/Caracas',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).formatToParts(date);
+            const map = {};
+            parts.forEach(part => {
+                if (part.type !== 'literal') {
+                    map[part.type] = part.value;
+                }
             });
-        });
+            return `${map.year}-${map.month}-${map.day}`;
+        }
+
+        function syncCloseDayClock() {
+            if (!currentDayLabel || !hiddenDateField) {
+                return;
+            }
+            const now = new Date();
+            const displayDate = new Intl.DateTimeFormat('es-VE', {
+                timeZone: 'America/Caracas',
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            }).format(now);
+            hiddenDateField.value = formatDateParts(now);
+            currentDayLabel.textContent = `Cierra las ventas abiertas de ${displayDate} y prepara una nueva jornada.`;
+        }
+
+        syncCloseDayClock();
+        window.setInterval(syncCloseDayClock, 1000);
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const query = this.value.toLowerCase();
+                rows.forEach(row => {
+                    const text = row.innerText.toLowerCase();
+                    row.style.display = query && !text.includes(query) ? 'none' : '';
+                });
+            });
+        }
+
+        if (closeDayButton && closeDayModal && confirmReportsCheck && confirmCloseBtn && closeDayForm) {
+            closeDayButton.addEventListener('click', function () {
+                const modal = bootstrap.Modal.getOrCreateInstance(closeDayModal);
+                modal.show();
+            });
+
+            confirmReportsCheck.addEventListener('change', function () {
+                confirmCloseBtn.disabled = !this.checked;
+            });
+
+            confirmCloseBtn.addEventListener('click', function () {
+                if (!confirmReportsCheck.checked) {
+                    return;
+                }
+                closeDayForm.submit();
+            });
+        }
     });
 </script>
 {% endblock %}

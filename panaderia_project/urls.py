@@ -27,6 +27,8 @@ pan_urls = [
     path('marcas/nueva/', pan_views.MarcaCreateView.as_view(), name='marca_create'),
     path('ventas/', pan_views.VentaListView.as_view(), name='venta_list'),
     path('ventas/nueva/', pan_views.VentaCreateView.as_view(), name='venta_create'),
+    path('ventas/<int:pk>/editar/', pan_views.VentaUpdateView.as_view(), name='venta_update'),
+    path('ventas/<int:pk>/eliminar/', pan_views.VentaDeleteView.as_view(), name='venta_delete'),
     path('insumos-gastos/', pan_views.insumos_gastos_dashboard, name='insumos_gastos'),
     path('reportes/', pan_views.VentaReportView.as_view(), name='reportes'),
     path('reportes/exportar-pdf/', pan_views.export_report_pdf, name='export_report_pdf'),
@@ -34,6 +36,7 @@ pan_urls = [
     path('backups/', pan_views.backups_list, name='backups'),
     path('backups/create/', pan_views.create_backup, name='create_backup'),
     path('backups/upload/', pan_views.upload_backup, name='upload_backup'),
+    path('backups/restore/<int:pk>/', pan_views.restore_backup, name='restore_backup'),
     path('backups/download/<int:pk>/', pan_views.download_backup, name='download_backup'),
     path('backups/exportar-pdf/', pan_views.export_backup_pdf, name='export_backup_pdf'),
 ]

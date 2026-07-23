@@ -108,7 +108,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'es-es'
 
-TIME_ZONE = 'Europe/Madrid'  # Cambia esto a tu zona horaria local, ej: 'America/Mexico_City'
+TIME_ZONE = 'America/Caracas'
 
 USE_I18N = True
 

@@ -15,9 +15,10 @@ from functools import wraps
 from django.shortcuts import render
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
+from django.db.models import Q
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -551,6 +552,7 @@ class VentaCreateView(AdminRequiredMixin, generic.CreateView):
     def get_initial(self):
         initial = super().get_initial()
         initial['fecha'] = timezone.localdate().strftime('%Y-%m-%d')
+        initial['metodo_pago'] = 'efectivo'
         return initial
 
     def get_context_data(self, **kwargs):
@@ -578,13 +580,72 @@ class VentaCreateView(AdminRequiredMixin, generic.CreateView):
             return self.form_invalid(form, item_form)
 
         self.object.total = item.cantidad * item.precio_unitario
-        self.object.save(update_fields=['total'])
+        self.object.save(update_fields=['total', 'metodo_pago'])
         return redirect(self.get_success_url())
 
     def form_invalid(self, form, item_form=None):
         if item_form is None:
             item_form = VentaItemForm(self.request.POST)
         return self.render_to_response(self.get_context_data(form=form, item_form=item_form))
+
+
+class VentaUpdateView(AdminRequiredMixin, generic.UpdateView):
+    model = Venta
+    form_class = VentaForm
+    template_name = 'panaderia/venta_form.html'
+    success_url = reverse_lazy('panaderia:venta_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        item = self.object.items.first()
+        context['item_form'] = VentaItemForm(self.request.POST or None, instance=item)
+        context['today'] = timezone.localdate()
+        return context
+
+    def form_valid(self, form):
+        venta = self.object
+        item = venta.items.first()
+        if item:
+            item.restore_stock_change()
+
+        item_form = VentaItemForm(self.request.POST, instance=item)
+        if not item_form.is_valid():
+            return self.form_invalid(form, item_form)
+
+        updated_venta = form.save(commit=False)
+        updated_venta.save()
+
+        item = item_form.save(commit=False)
+        item.venta = updated_venta
+        item.moneda = updated_venta.moneda
+        item.save()
+
+        if not item.apply_stock_change():
+            item.delete()
+            form.add_error(None, f"Stock insuficiente para {item.producto.nombre}.")
+            return self.form_invalid(form, item_form)
+
+        updated_venta.total = item.cantidad * item.precio_unitario
+        updated_venta.save(update_fields=['total', 'moneda', 'metodo_pago', 'fecha'])
+        return redirect(self.get_success_url())
+
+    def form_invalid(self, form, item_form=None):
+        if item_form is None:
+            item_form = VentaItemForm(self.request.POST)
+        return self.render_to_response(self.get_context_data(form=form, item_form=item_form))
+
+
+class VentaDeleteView(AdminRequiredMixin, generic.DeleteView):
+    model = Venta
+    template_name = 'panaderia/venta_confirm_delete.html'
+    success_url = reverse_lazy('panaderia:venta_list')
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        for item in self.object.items.all():
+            item.restore_stock_change()
+        self.object.delete()
+        return redirect(self.get_success_url())
 
 
 class VentaReportView(AdminRequiredMixin, generic.TemplateView):
@@ -682,21 +743,79 @@ def export_report_pdf(request):
         gastos = gastos.filter(fecha__lte=fecha_fin)
 
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=0.6 * inch, leftMargin=0.6 * inch, topMargin=0.6 * inch, bottomMargin=0.6 * inch)
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=0.45 * inch,
+        leftMargin=0.45 * inch,
+        topMargin=0.45 * inch,
+        bottomMargin=0.45 * inch,
+    )
     styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='SectionTitle', parent=styles['Heading2'], fontSize=13, leading=15, textColor=colors.HexColor('#5D4037'), spaceBefore=6, spaceAfter=6, fontName='Helvetica-Bold'))
+    styles.add(ParagraphStyle(name='MutedText', parent=styles['BodyText'], fontSize=8, textColor=colors.HexColor('#6B7280'), leading=10))
     story = []
 
+    currency_palette = {
+        'COP': colors.HexColor('#1976d2'),
+        'VES': colors.HexColor('#fbc02d'),
+        'USD': colors.HexColor('#388e3c'),
+    }
+    currency_text = {
+        'COP': colors.whitesmoke,
+        'VES': colors.black,
+        'USD': colors.whitesmoke,
+    }
+
     logo_path = os.path.join(settings.BASE_DIR, 'panaderia', 'static', 'panaderia', 'img', 'logo.png')
-    logo = Image(logo_path, width=1.0 * inch, height=1.0 * inch)
-    header = [logo, Paragraph('Grupo Panadería Los Ángeles Santa Elena<br/><b>Reporte general</b>', styles['Title'])]
-    story.append(Table([header], colWidths=[1.2 * inch, 5.5 * inch]))
-    story.append(Spacer(1, 0.2 * inch))
+    logo = Image(logo_path, width=0.9 * inch, height=0.9 * inch) if os.path.exists(logo_path) else None
+    header_text = [
+        Paragraph('Grupo Panadería Los Ángeles Santa Elena', styles['Title']),
+        Paragraph('Reporte general del negocio', styles['Heading2']),
+    ]
+    if fecha_inicio or fecha_fin:
+        header_text.append(Paragraph(f'Periodo: {fecha_inicio or "-"} a {fecha_fin or "-"}', styles['MutedText']))
+    header_table_data = [header_text]
+    if logo is not None:
+        header_table_data = [[logo, header_text[0], header_text[1], header_text[2]]] if len(header_text) > 2 else [[logo, header_text[0], header_text[1]]]
+        header_table = Table(header_table_data, colWidths=[1.0 * inch, 2.2 * inch, 2.2 * inch, 1.4 * inch])
+    else:
+        header_table = Table([['', header_text[0], header_text[1], header_text[2]]], colWidths=[0.2 * inch, 2.0 * inch, 2.0 * inch, 1.8 * inch])
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (1, 0), (-1, 0), 'LEFT'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    story.append(header_table)
+    story.append(Spacer(1, 0.12 * inch))
 
     totals = {'COP': 0.0, 'VES': 0.0, 'USD': 0.0}
     for venta in ventas:
         totals[venta.moneda] += float(venta.total)
 
-    story.append(Paragraph('Totales por moneda', styles['Heading2']))
+    summary_total = sum(float(venta.total) for venta in ventas)
+    summary_data = [
+        ['Ventas registradas', str(ventas.count())],
+        ['Ítems vendidos', str(sum(venta.items.count() for venta in ventas))],
+        ['Total acumulado', f'{summary_total:.2f}'],
+        ['Gastos registrados', str(gastos.count())],
+    ]
+    summary_table = Table(summary_data, colWidths=[3.1 * inch, 2.2 * inch])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#FFF9E6')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#D7C4A7')),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#4B5563')),
+    ]))
+    story.append(Paragraph('Resumen ejecutivo', styles['SectionTitle']))
+    story.append(summary_table)
+    story.append(Spacer(1, 0.2 * inch))
+
+    story.append(Paragraph('Totales por moneda', styles['SectionTitle']))
     totals_data = [
         ['Moneda', 'Total'],
         ['Pesos colombianos', f"{totals['COP']:.2f}"],
@@ -708,22 +827,20 @@ def export_report_pdf(request):
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6D4C41')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BACKGROUND', (0, 1), (0, 1), colors.HexColor('#1976d2')),
-        ('BACKGROUND', (0, 2), (0, 2), colors.HexColor('#fbc02d')),
-        ('BACKGROUND', (0, 3), (0, 3), colors.HexColor('#388e3c')),
-        ('TEXTCOLOR', (0, 1), (-1, 1), colors.whitesmoke),
-        ('TEXTCOLOR', (0, 2), (-1, 2), colors.black),
-        ('TEXTCOLOR', (0, 3), (-1, 3), colors.whitesmoke),
-        # Force numeric column colors for legibility: Pesos (row 1) and Dólares (row 3)
-        ('TEXTCOLOR', (1, 1), (1, 1), colors.black),
-        ('TEXTCOLOR', (1, 3), (1, 3), colors.black),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#D7C4A7')),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('BACKGROUND', (0, 1), (0, 1), currency_palette['COP']),
+        ('BACKGROUND', (0, 2), (0, 2), currency_palette['VES']),
+        ('BACKGROUND', (0, 3), (0, 3), currency_palette['USD']),
+        ('TEXTCOLOR', (0, 1), (0, 1), currency_text['COP']),
+        ('TEXTCOLOR', (0, 2), (0, 2), currency_text['VES']),
+        ('TEXTCOLOR', (0, 3), (0, 3), currency_text['USD']),
+        ('FONTNAME', (0, 1), (0, 3), 'Helvetica-Bold'),
     ]))
     story.append(totals_table)
-    story.append(Spacer(1, 0.3 * inch))
+    story.append(Spacer(1, 0.25 * inch))
 
-    story.append(Paragraph('Ventas', styles['Heading2']))
+    story.append(Paragraph('Ventas', styles['SectionTitle']))
     table_data = [['Fecha', 'Moneda', 'Producto', 'Categoría', 'Cantidad', 'Precio unitario', 'Total']]
     for venta in ventas:
         for item in venta.items.all():
@@ -740,7 +857,7 @@ def export_report_pdf(request):
     if len(table_data) == 1:
         table_data.append(['Sin ventas registradas', '', '', '', '', '', ''])
 
-    sales_table = Table(table_data, repeatRows=1)
+    sales_table = Table(table_data, repeatRows=1, colWidths=[0.9 * inch, 0.95 * inch, 1.7 * inch, 1.15 * inch, 0.65 * inch, 1.0 * inch, 0.9 * inch])
     sales_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6D4C41')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -750,10 +867,18 @@ def export_report_pdf(request):
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
         ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
     ]))
+    for idx, row in enumerate(table_data[1:], start=1):
+        moneda = row[1]
+        if moneda == 'Pesos colombianos':
+            sales_table.setStyle(TableStyle([('BACKGROUND', (1, idx), (1, idx), currency_palette['COP']), ('TEXTCOLOR', (1, idx), (1, idx), currency_text['COP'])]))
+        elif moneda == 'Bolívares venezolanos':
+            sales_table.setStyle(TableStyle([('BACKGROUND', (1, idx), (1, idx), currency_palette['VES']), ('TEXTCOLOR', (1, idx), (1, idx), currency_text['VES'])]))
+        elif moneda == 'Dólares':
+            sales_table.setStyle(TableStyle([('BACKGROUND', (1, idx), (1, idx), currency_palette['USD']), ('TEXTCOLOR', (1, idx), (1, idx), currency_text['USD'])]))
     story.append(sales_table)
-    story.append(Spacer(1, 0.3 * inch))
+    story.append(Spacer(1, 0.25 * inch))
 
-    story.append(Paragraph('Inventario general', styles['Heading2']))
+    story.append(Paragraph('Inventario general', styles['SectionTitle']))
     product_table_data = [['Nombre', 'Marca', 'Categoría', 'Stock']]
     for producto in productos:
         product_table_data.append([
@@ -766,7 +891,7 @@ def export_report_pdf(request):
     if len(product_table_data) == 1:
         product_table_data.append(['Sin productos registrados', '', '', ''])
 
-    product_table = Table(product_table_data, repeatRows=1)
+    product_table = Table(product_table_data, repeatRows=1, colWidths=[2.0 * inch, 1.6 * inch, 1.4 * inch, 0.8 * inch])
     product_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F4B400')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -777,9 +902,9 @@ def export_report_pdf(request):
         ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
     ]))
     story.append(product_table)
-    story.append(Spacer(1, 0.3 * inch))
+    story.append(Spacer(1, 0.25 * inch))
 
-    story.append(Paragraph('Inventario del Panadero (Recursos)', styles['Heading2']))
+    story.append(Paragraph('Inventario del Panadero (Recursos)', styles['SectionTitle']))
     recurso_table_data = [['Tipo de Item', 'Marca', 'Cantidad', 'Stock']]
     for recurso in recursos:
         recurso_table_data.append([
@@ -792,7 +917,7 @@ def export_report_pdf(request):
     if len(recurso_table_data) == 1:
         recurso_table_data.append(['Sin recursos registrados', '', '', ''])
 
-    recurso_table = Table(recurso_table_data, repeatRows=1)
+    recurso_table = Table(recurso_table_data, repeatRows=1, colWidths=[1.7 * inch, 1.6 * inch, 1.0 * inch, 0.8 * inch])
     recurso_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#8D6E63')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -803,9 +928,9 @@ def export_report_pdf(request):
         ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
     ]))
     story.append(recurso_table)
-    story.append(Spacer(1, 0.3 * inch))
+    story.append(Spacer(1, 0.25 * inch))
 
-    story.append(Paragraph('Insumos de empleados', styles['Heading2']))
+    story.append(Paragraph('Insumos de empleados', styles['SectionTitle']))
     employee_table_data = [['Empleado', 'Descripción', 'Cantidad', 'Costo', 'Estado']]
     for insumo in employee_insumos:
         employee_table_data.append([
@@ -819,7 +944,7 @@ def export_report_pdf(request):
     if len(employee_table_data) == 1:
         employee_table_data.append(['Sin insumos registrados', '', '', '', ''])
 
-    employee_table = Table(employee_table_data, repeatRows=1)
+    employee_table = Table(employee_table_data, repeatRows=1, colWidths=[1.1 * inch, 1.9 * inch, 0.8 * inch, 0.9 * inch, 0.9 * inch])
     employee_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1976D2')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -829,9 +954,9 @@ def export_report_pdf(request):
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
     ]))
     story.append(employee_table)
-    story.append(Spacer(1, 0.3 * inch))
+    story.append(Spacer(1, 0.25 * inch))
 
-    story.append(Paragraph('Gastos', styles['Heading2']))
+    story.append(Paragraph('Gastos', styles['SectionTitle']))
     gasto_table_data = [['Proveedor', 'Descripción', 'Monto', 'Estado']]
     for gasto in gastos:
         gasto_table_data.append([
@@ -844,7 +969,7 @@ def export_report_pdf(request):
     if len(gasto_table_data) == 1:
         gasto_table_data.append(['Sin gastos registrados', '', '', ''])
 
-    gasto_table = Table(gasto_table_data, repeatRows=1)
+    gasto_table = Table(gasto_table_data, repeatRows=1, colWidths=[1.4 * inch, 2.0 * inch, 1.0 * inch, 0.9 * inch])
     gasto_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#388E3C')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -924,6 +1049,8 @@ def backups_list(request):
 
     # lista de backups
     backups = Backup.objects.order_by('-created_at')
+    if target_date:
+        backups = backups.filter(Q(target_date=target_date) | Q(created_at__date=target_date))
 
     ventas = Venta.objects.prefetch_related('items__producto').order_by('-fecha', '-creado_en')
     if target_date:
@@ -962,7 +1089,8 @@ def create_backup(request):
     """Copia el archivo de base de datos actual al directorio MEDIA/backups y crea registro."""
     import shutil
     db_path = settings.DATABASES['default']['NAME']
-    timestamp = timezone.now().strftime('%Y%m%d-%H%M%S')
+    local_now = timezone.localtime(timezone.now())
+    timestamp = local_now.strftime('%Y%m%d-%H%M%S')
     dest_dir = os.path.join(settings.MEDIA_ROOT, 'backups')
     os.makedirs(dest_dir, exist_ok=True)
     dest_path = os.path.join(dest_dir, f'backup-{timestamp}.sqlite3')
@@ -1131,6 +1259,7 @@ def _import_backup_database(dest_path):
 
             if _table_exists(conn, 'panaderia_ventaitem'):
                 columns = _column_names(conn, 'panaderia_ventaitem')
+                venta_items_to_create = []
                 for row in conn.execute('SELECT * FROM "panaderia_ventaitem"').fetchall():
                     source_id = _get_value(row, columns, 'id')
                     source_venta_id = _get_value(row, columns, 'venta_id')
@@ -1139,14 +1268,18 @@ def _import_backup_database(dest_path):
                     dest_product_id = product_id_map.get(source_product_id)
                     if not dest_venta_id or not dest_product_id:
                         continue
-                    VentaItem.objects.create(
-                        id=source_id,
-                        venta_id=dest_venta_id,
-                        producto_id=dest_product_id,
-                        cantidad=int(_get_value(row, columns, 'cantidad') or 0),
-                        precio_unitario=_to_decimal(_get_value(row, columns, 'precio_unitario')),
-                        moneda=str(_get_value(row, columns, 'moneda') or 'COP').strip() or 'COP',
+                    venta_items_to_create.append(
+                        VentaItem(
+                            id=source_id,
+                            venta_id=dest_venta_id,
+                            producto_id=dest_product_id,
+                            cantidad=int(_get_value(row, columns, 'cantidad') or 0),
+                            precio_unitario=_to_decimal(_get_value(row, columns, 'precio_unitario')),
+                            moneda=str(_get_value(row, columns, 'moneda') or 'COP').strip() or 'COP',
+                        )
                     )
+                if venta_items_to_create:
+                    VentaItem.objects.bulk_create(venta_items_to_create)
     finally:
         conn.close()
 
@@ -1174,6 +1307,22 @@ def upload_backup(request):
                     messages.success(request, 'Importación desde respaldo completada: marcas, productos, ventas e ítems restaurados.')
                 except Exception as e:
                     messages.error(request, f'Error al importar datos desde el respaldo: {e}')
+    return redirect('panaderia:backups')
+
+
+@admin_required
+def restore_backup(request, pk):
+    backup = get_object_or_404(Backup, pk=pk)
+    file_path = os.path.join(settings.MEDIA_ROOT, backup.file.name)
+    if not os.path.exists(file_path):
+        messages.error(request, 'El archivo de respaldo no existe en el servidor.')
+        return redirect('panaderia:backups')
+
+    try:
+        _import_backup_database(file_path)
+        messages.success(request, 'Restauración desde respaldo completada: marcas, productos, ventas e ítems aplicados al sistema actual.')
+    except Exception as e:
+        messages.error(request, f'Error al restaurar el respaldo: {e}')
     return redirect('panaderia:backups')
 
 

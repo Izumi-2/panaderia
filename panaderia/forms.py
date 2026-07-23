@@ -131,13 +131,15 @@ class VentaForm(forms.ModelForm):
             if 'fecha' in self.fields:
                 self.fields['fecha'].initial = self.initial['fecha']
                 self.fields['fecha'].widget = forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d')
+        self.fields['metodo_pago'].empty_label = None
 
     class Meta:
         model = Venta
-        fields = ['fecha', 'moneda']
+        fields = ['fecha', 'moneda', 'metodo_pago']
         widgets = {
             'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'required': 'required'}, format='%Y-%m-%d'),
             'moneda': forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
+            'metodo_pago': forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
         }
 
     def clean_fecha(self):
@@ -146,15 +148,37 @@ class VentaForm(forms.ModelForm):
             raise forms.ValidationError('La fecha no puede ser futura.')
         return fecha
 
+    def clean(self):
+        cleaned_data = super().clean()
+        moneda = cleaned_data.get('moneda')
+        metodo_pago = cleaned_data.get('metodo_pago')
+        if moneda != 'VES' and metodo_pago == 'pago_movil':
+            raise forms.ValidationError('El pago móvil solo está disponible para ventas en bolívares.')
+        if moneda != 'VES' and metodo_pago == 'tarjeta':
+            raise forms.ValidationError('La tarjeta / punto de venta solo está disponible para ventas en bolívares.')
+        return cleaned_data
+
 
 class VentaItemForm(forms.ModelForm):
+    cantidad = forms.IntegerField(
+        min_value=1,
+        required=True,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'required': 'required'}),
+        error_messages={'required': 'Debes ingresar la cantidad.', 'min_value': 'La cantidad debe ser al menos 1.'},
+    )
+    precio_unitario = forms.DecimalField(
+        min_value=0,
+        required=True,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'required': 'required'}),
+        error_messages={'required': 'Debes ingresar el precio unitario.', 'min_value': 'El precio unitario no puede ser negativo.'},
+    )
+
     class Meta:
         model = VentaItem
         fields = ['producto', 'cantidad', 'precio_unitario']
         widgets = {
             'producto': forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
-            'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'required': 'required'}),
-            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'required': 'required'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -166,6 +190,14 @@ class VentaItemForm(forms.ModelForm):
         cleaned_data = super().clean()
         producto = cleaned_data.get('producto')
         cantidad = cleaned_data.get('cantidad')
+        precio_unitario = cleaned_data.get('precio_unitario')
+
+        if cantidad is not None and cantidad < 1:
+            raise forms.ValidationError('La cantidad debe ser al menos 1.')
+
+        if precio_unitario is not None and precio_unitario < 0:
+            raise forms.ValidationError('El precio unitario no puede ser negativo.')
+
         if producto and cantidad is not None and cantidad > producto.stock:
             raise forms.ValidationError(f'Stock insuficiente para {producto.nombre}. Disponible: {producto.stock}.')
         return cleaned_data

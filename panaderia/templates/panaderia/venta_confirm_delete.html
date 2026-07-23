@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Eliminar venta{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Eliminar venta</h1>
+        <p class="page-intro">Esta acción quitará la venta y devolverá el stock correspondiente al inventario.</p>
+    </div>
+</div>
+
+<div class="card p-4 shadow-sm">
+    <p>¿Seguro que deseas eliminar la venta <strong>#{{ object.id }}</strong> por <strong>{{ object.total|floatformat:2 }}</strong> en <strong>{{ object.get_moneda_display }}</strong>?</p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="d-flex gap-2">
+            <a href="{% url 'panaderia:venta_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-danger">Eliminar venta</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

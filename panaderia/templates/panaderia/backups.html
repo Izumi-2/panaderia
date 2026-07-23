@@ -3,24 +3,28 @@
 <div class="page-header">
     <div>
         <h2 class="header-title">Respaldos</h2>
-        <p class="page-intro">Administra copias y archivos de respaldo para proteger la información de la panadería.</p>
+        <p class="page-intro">Administra copias de seguridad, descarga archivos y revisa el historial de ventas asociado a cada snapshot.</p>
     </div>
 </div>
-<div class="card section-card p-4 shadow-sm">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-3">
-        <div>
-            {# Descripción eliminada por petición del usuario - se mantiene sólo el selector de fecha y acciones principales #}
-        </div>
-        <div class="d-flex gap-2 align-items-center">
-            <label for="date" class="mb-0">Fecha:</label>
-            <form method="get" class="d-flex gap-2 align-items-center">
-                <input type="date" id="date" name="date" class="form-control" value="{% if selected_date %}{{ selected_date|date:'Y-m-d' }}{% endif %}">
+
+<div class="section-card p-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-lg-6">
+            <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+                <div>
+                    <label for="date" class="form-label mb-1">Filtrar por fecha</label>
+                    <input type="date" id="date" name="date" class="form-control" value="{% if selected_date %}{{ selected_date|date:'Y-m-d' }}{% endif %}">
+                </div>
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+                <a href="{% url 'panaderia:backups' %}" class="btn btn-outline-secondary">Limpiar</a>
             </form>
+        </div>
+        <div class="col-lg-6 d-flex flex-wrap gap-2 justify-content-lg-end">
             <a id="createBackupBtn" href="{% url 'panaderia:create_backup' %}{% if selected_date %}?date={{ selected_date|date:'Y-m-d' }}{% endif %}" class="btn btn-outline-primary">Crear respaldo ahora</a>
-            <form action="{% url 'panaderia:upload_backup' %}" method="post" enctype="multipart/form-data" class="d-inline">
+            <form action="{% url 'panaderia:upload_backup' %}" method="post" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-center">
                 {% csrf_token %}
-                <input type="file" name="backup_file" accept=".sqlite3,.db" required>
-                <label class="ms-2 me-1"><input type="checkbox" name="import" value="1"> Importar inventario</label>
+                <input type="file" name="backup_file" accept=".sqlite3,.db" class="form-control form-control-sm" required>
+                <label class="form-check-label mb-0"><input type="checkbox" name="import" value="1" class="form-check-input me-1"> Importar inventario</label>
                 <button type="submit" class="btn btn-outline-secondary">Subir respaldo</button>
             </form>
         </div>
@@ -28,20 +32,25 @@
 
     <div class="row g-4 mt-2">
         <div class="col-lg-7">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-dark text-white">Historial de ventas</div>
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <span>Historial de ventas</span>
+                    {% if selected_date %}
+                        <span class="badge bg-light text-dark">{{ selected_date|date:'d/m/Y' }}</span>
+                    {% endif %}
+                </div>
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                         <div>
                             <strong>{{ ventas_totales.count }}</strong> ventas registradas
                         </div>
-                        <div>
+                        <div class="d-flex gap-2 flex-wrap">
                             <span class="badge bg-success">{{ ventas_totales.items }} ítems</span>
                             <span class="badge bg-primary">Total {{ ventas_totales.total }} COP</span>
                         </div>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-sm table-bordered mb-0">
+                        <table class="table table-sm table-bordered mb-0 align-middle">
                             <thead>
                                 <tr>
                                     <th>Fecha</th>
@@ -72,11 +81,11 @@
             </div>
         </div>
         <div class="col-lg-5">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-secondary text-white">Respaldos</div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-sm table-bordered mb-0">
+                        <table class="table table-sm table-bordered mb-0 align-middle">
                             <thead>
                                 <tr>
                                     <th>Archivo</th>
@@ -88,12 +97,12 @@
                                 {% for b in backups %}
                                 <tr>
                                     <td>{{ b.file.name }}</td>
-                                    <td>{{ b.created_at|date:'d/m/Y H:i' }}</td>
+                                    <td>{{ b.created_at|date:'d/m/Y H:i' }}{% if b.target_date %}<br><span class="badge bg-info">Snapshot: {{ b.target_date|date:'d/m/Y' }}</span>{% endif %}</td>
                                     <td>
-                                        <a href="{% url 'panaderia:download_backup' b.id %}" class="btn btn-sm btn-primary">Descargar</a>
-                                        {% if b.target_date %}
-                                            <span class="badge bg-info ms-2">Snapshot: {{ b.target_date|date:'d/m/Y' }}</span>
-                                        {% endif %}
+                                        <div class="d-flex flex-column gap-2">
+                                            <a href="{% url 'panaderia:restore_backup' b.id %}" class="btn btn-sm btn-success">Restaurar</a>
+                                            <a href="{% url 'panaderia:download_backup' b.id %}" class="btn btn-sm btn-primary">Descargar</a>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% empty %}

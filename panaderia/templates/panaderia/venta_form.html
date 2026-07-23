@@ -19,9 +19,30 @@
 <div class="card p-4 shadow-sm">
     <form method="post">
         {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+            </div>
+        {% endif %}
+        {% if item_form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in item_form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+            </div>
+        {% endif %}
         <div class="row g-3 mb-4">
-            <div class="col-md-6">{{ form.fecha.label_tag }} {{ form.fecha }}</div>
-            <div class="col-md-6">{{ form.moneda.label_tag }} {{ form.moneda }}</div>
+            <div class="col-md-4">
+                {{ form.fecha.label_tag }} {{ form.fecha }}
+                {% if form.fecha.errors %}<div class="text-danger small">{{ form.fecha.errors|join:', ' }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                {{ form.moneda.label_tag }} {{ form.moneda }}
+                {% if form.moneda.errors %}<div class="text-danger small">{{ form.moneda.errors|join:', ' }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                {{ form.metodo_pago.label_tag }} {{ form.metodo_pago }}
+                <div class="form-text text-muted">Si la moneda es bolívares, puedes seleccionar también tarjeta o punto de venta.</div>
+                {% if form.metodo_pago.errors %}<div class="text-danger small">{{ form.metodo_pago.errors|join:', ' }}</div>{% endif %}
+            </div>
         </div>
 
         <div class="sale-section mb-4">
@@ -39,11 +60,18 @@
                     <input type="text" id="producto-search" class="form-control mb-2" placeholder="Filtrar por nombre">
                     <div class="producto-picker">
                         {{ item_form.producto }}
+                        {% if item_form.producto.errors %}<div class="text-danger small">{{ item_form.producto.errors|join:', ' }}</div>{% endif %}
                     </div>
                     <div class="form-text">Si el producto no aparece, revisa su existencia en inventario.</div>
                 </div>
-                <div class="col-md-3">{{ item_form.cantidad.label_tag }} {{ item_form.cantidad }}</div>
-                <div class="col-md-4">{{ item_form.precio_unitario.label_tag }} {{ item_form.precio_unitario }}</div>
+                <div class="col-md-3">
+                    {{ item_form.cantidad.label_tag }} {{ item_form.cantidad }}
+                    {% if item_form.cantidad.errors %}<div class="text-danger small">{{ item_form.cantidad.errors|join:', ' }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    {{ item_form.precio_unitario.label_tag }} {{ item_form.precio_unitario }}
+                    {% if item_form.precio_unitario.errors %}<div class="text-danger small">{{ item_form.precio_unitario.errors|join:', ' }}</div>{% endif %}
+                </div>
             </div>
 
             <section class="product-summary card mt-4 p-3 border-0 shadow-sm">
